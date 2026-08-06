@@ -1,91 +1,346 @@
-"""Visualizzazione: k droni con capacita' limitata contro n punti da coprire.
+import solara
 
-Avvio:  uv run solara run App.py
+import numpy as np
+from matplotlib.collections import EllipseCollection
+from matplotlib.lines import Line2D
 
-Verde  = punto COPERTO da almeno un drone
-Grigio = punto SCOPERTO
-Drone grigio = non sta coprendo nulla (risorsa sprecata)
-"""
-
-from matplotlib.markers import MarkerStyle
-from mesa.visualization import Slider, SolaraViz, SpaceRenderer, make_plot_component
+from mesa.visualization import SolaraViz, SpaceRenderer, Slider, make_plot_component
 from mesa.visualization.components import AgentPortrayalStyle
 
-from Agents import TargetAgent
-from Model import BoidFlockers, BoidsScenario
-
-# Il backend matplotlib fa una scatter() separata per ogni marker distinto: con un
-# marker per grado il disegno costa ~4x. 15 gradi e' impercettibile a occhio.
-PASSO_MARKER = 15
-MARKER_CACHE = {deg: MarkerStyle("^") for deg in range(0, 360, PASSO_MARKER)}
-for deg, marker in MARKER_CACHE.items():
-    marker._transform = marker.get_transform().rotate_deg(deg)
+from Model import CoverageModel
 
 
-def agent_draw(agent):
-    if isinstance(agent, TargetAgent):
-        coperto = agent.covered_by > 0
+# --- RICONOSCIMENTO DEGLI AGENTI ---
+# NIENTE isinstance, e non e' pigrizia. Solara ricarica i moduli mentre l'app gira:
+# dopo un reload, Agents.TargetAgent e' un oggetto-classe NUOVO, mentre queste
+# funzioni hanno catturato quello VECCHIO. isinstance() confronta l'identita' della
+# classe, quindi comincia a restituire False su agenti perfettamente validi - senza
+# sollevare niente. Il sintomo e' che pezzi del disegno spariscono dopo qualche
+# ricarica e non tornano piu'.
+# Il controllo sugli attributi invece regge, perche' guarda cosa l'oggetto SA FARE
+# e non da quale oggetto-classe discende. Verificato ricaricando il modulo a mano.
+def e_un_punto(agente):
+    """Vero per un TargetAgent: solo i punti hanno una quota."""
+    return hasattr(agente, "priority")
+
+
+def e_un_drone(agente):
+    """Vero per un Drone: solo i droni sanno di stare esplorando."""
+    return hasattr(agente, "exploring")
+
+
+# --- COLORI ---
+# In alto e non sparsi nel codice: sono l'unica cosa che si cambia davvero spesso,
+# e averli qui evita di andarli a cercare dentro gli if.
+# I quattro stati di un punto sono una SCALA ORDINATA, e i colori la seguono:
+# rosso -> arancione -> verde -> ciano = nessuno, pochi, giusti, troppi.
+# Il ciano e non il viola per l'eccesso: il viola e' gia' "drone in viaggio", e
+# condividere una tinta fra due stati concettualmente scollegati confonde, anche se
+# le forme (quadrato/cerchio) sarebbero diverse.
+COLORE_SCOPERTO = "tab:red"      # punto con ZERO droni: nessuno lo sta guardando
+COLORE_PARZIALE = "tab:orange"   # ha qualcuno ma non abbastanza
+COLORE_SERVITO = "tab:green"     # punto esattamente alla sua quota
+COLORE_ECCESSO = "tab:cyan"      # punto con piu' droni di quanti ne chieda
+COLORE_STAZIONE = "tab:blue"     # drone che sta presidiando
+COLORE_VIAGGIO = "tab:purple"    # drone con un target ma non ancora arrivato
+COLORE_ESPLORA = "tab:gray"      # drone che non vede nessun punto da servire
+
+
+def agent_portrayal(agent):
+    """Dice a Mesa come disegnare UN agente. Viene chiamata per ognuno, a ogni frame.
+
+    Deve restituire un AgentPortrayalStyle. In Mesa 3.5.1 restituire un dizionario
+    funziona ancora ma e' DEPRECATO (emette un warning e sparira' in Mesa 4): quasi
+    tutti i tutorial in circolazione usano ancora la forma vecchia.
+    """
+
+    if e_un_punto(agent):
+        # --- PUNTI DI INTERESSE ---
+        # DUE CANALI VISIVI INDIPENDENTI, ed e' una scelta, non un dettaglio:
+        #   dimensione = priorita'  -> la DOMANDA, che non cambia
+        #   colore     = deficit    -> lo STATO, che cambia a ogni passo
+        # Mescolandoli in un canale solo non distingueresti un punto di quota 3
+        # soddisfatto da uno di quota 1 soddisfatto: due situazioni molto diverse.
+        # QUATTRO stati e non tre: separare "zero droni" da "qualcuno ma non
+        # abbastanza" e' la distinzione che conta di piu' guardando la mappa. Un punto
+        # di quota 3 con due droni sopra sta per essere risolto; uno con zero droni
+        # non lo ha ancora trovato nessuno. Prima erano tutti e due rossi, e nel mondo
+        # di default erano 6 punti rossi di cui solo 2 davvero deserti.
+        # Guardo occupancy e non il segno del deficit, perche' il deficit da solo non
+        # distingue 0 da "qualcuno": priority 3 con 0 droni e priority 1 con 0 droni
+        # hanno deficit diverso ma sono lo stesso stato.
+        if agent.occupancy == 0:
+            colore = COLORE_SCOPERTO
+        elif agent.occupancy < agent.priority:
+            colore = COLORE_PARZIALE
+        elif agent.occupancy == agent.priority:
+            colore = COLORE_SERVITO
+        else:
+            colore = COLORE_ECCESSO
+
         return AgentPortrayalStyle(
-            color="tab:green" if coperto else "0.75",
-            size=90 if coperto else 45,
-            marker="*",
-            zorder=1,
-            edgecolors="black" if coperto else "0.5",
-            linewidths=0.6,
+            color=colore,
+            marker="s",                       # quadrato: i punti sono luoghi, non veicoli
+            size=90 + 70 * agent.priority,    # quota 1 -> 160, quota 3 -> 300
+            zorder=1,                         # sotto ai droni: i droni non devono sparirci sopra
+            edgecolors="black",
+            linewidths=0.5,
         )
 
-    # drone grigio = non copre niente: si vede subito la risorsa sprecata
-    attivo = agent.n_covered > 0
+    # --- DRONI ---
+    # I tre colori corrispondono esattamente alle metriche raccolte dal modello:
+    # in stazione = n_covered > 0, esplorazione = exploring, viaggio = il resto.
+    # Cosi' quello che vedi nella mappa e quello che leggi nei grafici sono la stessa
+    # grandezza, e un disaccordo fra i due segnala un errore da qualche parte.
+    if agent.n_covered > 0:
+        colore = COLORE_STAZIONE
+    elif agent.exploring:
+        colore = COLORE_ESPLORA
+    else:
+        colore = COLORE_VIAGGIO
+
     return AgentPortrayalStyle(
-        color="tab:red" if attivo else "0.55",
-        size=30,
-        marker=MARKER_CACHE[int(round(agent.angle / PASSO_MARKER) * PASSO_MARKER) % 360],
+        color=colore,
+        # CERCHIO e non triangolo, deliberatamente. Il marker a tupla di matplotlib
+        # (3, 0, angolo), che ruoterebbe un triangolo secondo la rotta, NON funziona
+        # qui: il backend di Mesa 3.5.1 raccoglie i marker in un array numpy e li
+        # confronta con ==, e una tupla manda in errore il broadcasting (verificato).
+        # Un triangolo FISSO sarebbe pero' peggio di un cerchio: sembrerebbe indicare
+        # una direzione senza indicarla, il che e' peggio che non indicarne nessuna.
+        # La rotta vera la disegna il quiver in aggiungi_livelli_extra().
+        marker="o",
+        size=28,
         zorder=2,
-        edgecolors="none",  # se un agente dichiara edgecolors devono farlo TUTTI
-        linewidths=0.0,
+        # edgecolors e linewidths vanno dati a TUTTI gli agenti o a nessuno: il backend
+        # accumula solo i valori non nulli, quindi impostandoli soltanto sui punti
+        # l'array risulta di 12 elementi contro 52 agenti e la maschera di zorder va
+        # fuori sincrono con un IndexError. Verificato eseguendolo.
+        edgecolors="black",
+        linewidths=0.3,
     )
 
 
+# --- LEGENDA ---
+# Voci costruite a mano con Line2D "vuote": servono solo come campioni di colore,
+# non disegnano dati. E' il modo standard di fare una legenda quando i colori
+# vengono da un unico scatter multicolore e non da serie separate.
+def _voce_legenda(colore, forma, etichetta):
+    return Line2D(
+        [], [], color=colore, marker=forma, linestyle="none",
+        markersize=8, markeredgecolor="black", markeredgewidth=0.3, label=etichetta,
+    )
+
+
+# ETICHETTE CORTE, e la lunghezza qui e' un vincolo misurato, non uno stile.
+# La legenda sta sotto la mappa e la figura viene salvata con bbox_inches="tight":
+# la larghezza della legenda diventa la larghezza dell'IMMAGINE. Con gli assi a
+# aspect="equal" la mappa quadrata deve poi starci dentro, quindi una legenda larga
+# la rimpicciolisce. Misurato: con etichette da ~27 caratteri l'immagine esce
+# 511x553 (rapporto 0.92, mappa piena); con una da 40 esce 593x310 (rapporto 1.91,
+# mappa ridotta a un francobollo). I nomi degli agenti non li ripeto ("punto
+# scoperto" -> "scoperto"): il colore del quadrato o del cerchio lo dice gia'.
+VOCI_LEGENDA = [
+    _voce_legenda(COLORE_SCOPERTO, "s", "scoperto"),
+    _voce_legenda(COLORE_PARZIALE, "s", "parziale"),
+    _voce_legenda(COLORE_SERVITO, "s", "servito"),
+    _voce_legenda(COLORE_ECCESSO, "s", "sovra-servito"),
+    _voce_legenda(COLORE_STAZIONE, "o", "in stazione"),
+    _voce_legenda(COLORE_VIAGGIO, "o", "in viaggio"),
+    _voce_legenda(COLORE_ESPLORA, "o", "esplora"),
+    # Il cerchio tratteggiato. La dicitura dice DI CHI E' il raggio, che e' la
+    # lettura sbagliata da prevenire: il cerchio sta attorno al punto ma il raggio
+    # e' del drone, ed e' il luogo delle posizioni da cui un drone lo presidia.
+    Line2D([], [], color="black", linestyle="--", linewidth=0.7, alpha=0.6,
+           label="presidio (raggio del drone)"),
+]
+
+
+def compatta(ax, larghezza, altezza):
+    """Rimpicciolisce la figura che contiene questi assi.
+
+    Serve perche' SolaraViz dispone i componenti in una griglia con celle di
+    altezza fissa (6 colonne x 10 righe), mentre matplotlib crea le figure alla
+    dimensione di default: eccedono la cella e si sovrappongono al componente
+    accanto. Ne' make_plot_component ne' SpaceRenderer accettano una figsize, ma
+    entrambi chiamano un post_process con gli Axes - e dagli Axes si risale alla
+    figura. E' l'unico punto di aggancio disponibile.
+    """
+    ax.get_figure().set_size_inches(larghezza, altezza)
+
+
+def compatta_grafico(ax):
+    """post_process dei tre grafici: solo la dimensione."""
+    compatta(ax, 4.6, 2.9)
+
+
+def configura_assi(ax):
+    """post_process del renderer: SOLO configurazione degli assi, nessun disegno.
+
+    Perche' solo configurazione: SolaraViz applica post_process UNA VOLTA SOLA
+    (tiene un flag _post_process_applied che non riazzera mai) e intanto ripulisce
+    patches/collections/lines/artists a OGNI frame. Un cerchio disegnato qui
+    comparirebbe al primo frame e sparirebbe al secondo. Verificato eseguendolo.
+    Legenda, titolo e proprieta' degli assi invece sopravvivono, perche' non stanno
+    in quelle liste: la legenda vive in ax.legend_.
+    """
+    # aspect equal: senza, con width != height matplotlib stira gli assi, i cerchi
+    # di copertura diventano ellissi e le distanze sullo schermo non corrispondono
+    # piu' a quelle del modello. In un modello di copertura e' fuorviante.
+    compatta(ax, 5.0, 5.4)
+    ax.set_aspect("equal")
+    # Legenda SOTTO e non a destra: con bbox_inches="tight" una legenda laterale
+    # allarga la figura, che sfonda la sua cella nella griglia di SolaraViz e va a
+    # sovrapporsi al componente accanto. Sotto la figura cresce in altezza, dove c'e'
+    # spazio, e su tre colonne resta compatta. Fuori dagli assi e non dentro per non
+    # coprire gli agenti.
+    ax.legend(
+        handles=VOCI_LEGENDA, loc="upper center", bbox_to_anchor=(0.5, -0.05),
+        ncol=3, frameon=False, fontsize=8,
+    )
+
+
+class CustomSpaceRenderer(SpaceRenderer):
+    """Renderer personalizzato che garantisce il disegno dei cerchi e delle frecce
+
+    anche dopo il Reset o il cambio dei parametri da slider.
+    """
+    def draw_agents(self, *args, **kwargs):
+        # 1. Fa il disegno standard dei droni e dei punti
+        risultato = super().draw_agents(*args, **kwargs)
+        ax = self.canvas
+
+        # 2. Recupera gli agenti dallo spazio corrente
+        punti = [a for a in self.space.agents if e_un_punto(a)]
+        droni = [a for a in self.space.agents if e_un_drone(a)]
+
+        # 3. Zone di copertura: UNA EllipseCollection invece di N add_patch(Circle).
+        # Misurato: 12 Circle con add_patch costano 25.0 ms per frame, una
+        # EllipseCollection 0.38 ms - sessantacinque volte meno, e con 12 punti e'
+        # gia' il 20% del costo totale di un frame. Il disegno e' identico.
+        # units="xy" + offset_transform=transData: larghezza e altezza sono in
+        # coordinate del MODELLO, non in punti-schermo. Senza, i cerchi non
+        # seguirebbero lo zoom e non varrebbero piu' coverage_radius.
+        if punti:
+            xy = np.array([p.position for p in punti])
+            diametro = np.full(len(punti), 2.0 * punti[0].model.coverage_radius)
+            ax.add_collection(EllipseCollection(
+                widths=diametro, heights=diametro, angles=np.zeros(len(punti)),
+                units="xy", offsets=xy, offset_transform=ax.transData,
+                facecolors="none", edgecolors="black", linestyles="--",
+                linewidths=0.7, alpha=0.45, zorder=0,
+            ))
+
+        # 4. Disegna le frecce di direzione (quiver) per i droni
+        if droni:
+            x = np.array([d.position[0] for d in droni])
+            y = np.array([d.position[1] for d in droni])
+            ang = np.radians(np.array([d.angle for d in droni]))
+            ax.quiver(x, y, np.cos(ang), np.sin(ang),
+                      scale=45, width=0.0035, alpha=0.55, zorder=3)
+
+        return risultato
+
+
+# --- PARAMETRI REGOLABILI DALL'INTERFACCIA ---
+# I MINIMI NON SONO ARBITRARI. Spostare uno slider RICOSTRUISCE il modello da zero,
+# quindi una combinazione che viola un guardrail solleva ValueError e pianta
+# l'interfaccia. Con i parametri tenuti fissi (speed=1, vision=10, coverage_radius=8):
+#     cohere         >= speed/coverage_radius = 0.125  ->  minimo 0.15   (guardrail 2)
+#     sensing_radius >= vision = 10                    ->  minimo 10.0   (guardrail 1)
+#     sensing_radius >= coverage_radius = 8            ->  gia' coperto  (guardrail 3)
+#     2*margin = 24 < 100                              ->  sempre vero   (guardrail 4)
+# Per questo speed, vision e coverage_radius NON sono esposti: renderli regolabili
+# accoppierebbe i vincoli fra loro e nessuna scelta di estremi sarebbe piu' sicura.
+# Quei tre si cambiano da run_batch.py, dove un ValueError e' un'informazione utile
+# e non un'applicazione che si chiude in faccia a chi la sta usando.
 model_params = {
-    "rng": {"type": "InputText", "value": 42, "label": "Seme casuale"},
-    # --- risorse: qui si crea la scarsita' ---
-    "population_size": Slider("Droni (k)", 12, 2, 40, 1),
-    "n_targets": Slider("Punti da coprire (n)", 60, 5, 150, 5),
-    "coverage_radius": Slider("Raggio di copertura", 8, 2, 25, 1),
-    # --- territorio ---
-    "target_layout": {
+    "seed": Slider("seme casuale", value=42, min=0, max=200, step=1),
+    "n_droni": Slider("droni", value=20, min=5, max=90, step=5),
+    "n_punti": Slider("punti di interesse", value=12, min=2, max=30, step=1),
+    "priorita_massima": Slider("quota massima per punto", value=3, min=1, max=6, step=1),
+    "partenza": {
         "type": "Select",
-        "value": "cluster",
-        "values": ["cluster", "casuale", "griglia"],
-        "label": "Disposizione dei punti",
+        "value": "sparsi",
+        "values": ["sparsi", "base"],
+        "label": "schieramento iniziale",
     },
-    "n_clusters": Slider("Numero di cluster", 6, 1, 15, 1),
-    "cluster_spread": Slider("Ampiezza dei cluster", 7, 2, 25, 1),
-    # --- boid ---
-    # Vincolo: il raggio di virata (speed/cohere) deve stare DENTRO il raggio di
-    # copertura, altrimenti il drone orbita fuori dal punto e la copertura oscilla.
-    "speed": Slider("Velocita'", 1.0, 0.5, 5.0, 0.5),
-    "cohere": Slider("Attrazione al punto", 0.25, 0.02, 0.6, 0.01),
-    "vision": Slider("Raggio di percezione", 10, 1, 50, 1),
-    "separation": Slider("Distanza minima", 2, 1, 20, 1),
-    "separate": Slider("Separazione", 0.015, 0.0, 0.2, 0.005),
-    "match": Slider("Allineamento", 0.05, 0.0, 0.3, 0.01),
+    "beta": Slider("beta: costo del viaggio", value=0.05, min=0.0, max=0.30, step=0.01),
+    "cohere": Slider("attrazione al punto", value=0.25, min=0.15, max=0.60, step=0.05),
+    "sensing_radius": Slider("raggio di percezione dei punti", value=10.0, min=10.0, max=40.0, step=1.0),
+    "match": Slider("allineamento fra droni", value=0.05, min=0.0, max=0.20, step=0.01),
+    "explore": Slider("intensita' dell'esplorazione", value=0.2, min=0.0, max=0.60, step=0.05),
 }
 
-model = BoidFlockers(scenario=BoidsScenario())
 
-renderer = SpaceRenderer(model, backend="matplotlib").setup_agents(agent_draw).render()
-
-copertura = make_plot_component({"PuntiCoperti": "tab:green", "DroniOziosi": "tab:gray"})
-spreco = make_plot_component({"Ridondanza": "tab:red"})
-
-page = SolaraViz(
-    model,
-    renderer,
-    components=[copertura, spreco],
-    model_params=model_params,
-    name="Copertura di punti con risorse scarse",
-    play_interval=10,   # il default e' 100 ms: da solo mette un tetto di 10 fps
-    render_interval=1,
+# --- GRAFICI ---
+# I nomi sono ESATTAMENTE le chiavi dei model_reporters del DataCollector: se non
+# combaciano il grafico resta vuoto senza dire perche'.
+# Primo grafico: il deficit insieme al suo pavimento. Vanno letti sempre insieme -
+# un deficit che si assesta su 4 e' un fallimento se il pavimento e' 0 e un successo
+# perfetto se il pavimento e' 4.
+# Solo il deficit residuo. deficit_incomprimibile NON e' qui apposta: e' una
+# costante, quindi una retta orizzontale che non aggiunge informazione nel tempo,
+# spesso vale 0 e schiaccia la curva vera in alto, e - cosa peggiore - puo' essere
+# legittimamente attraversata verso il basso (vedi il commento nel modello), il che
+# la fa sembrare un bug. Resta un attributo del modello, da leggere quando serve.
+grafico_deficit = make_plot_component(
+    {"deficit_residuo": "tab:red"}, post_process=compatta_grafico
 )
-page  # noqa: B018
+
+# Secondo: i due tipi di drone inattivo. La DISTANZA fra le due curve e' la
+# diagnostica: sono i droni che un punto l'hanno scelto ma non lo stanno presidiando.
+grafico_droni = make_plot_component(
+    {"droni_oziosi": "tab:gray", "droni_in_esplorazione": "tab:purple"}, post_process=compatta_grafico
+)
+
+# Terzo: i due modi di sbagliare, punti lasciati indietro e droni sprecati.
+grafico_punti = make_plot_component(
+    {"punti_soddisfatti": "tab:green", "sovra_servizio": "tab:orange"}, post_process=compatta_grafico
+)
+
+
+
+
+# --- COMPONENTE INTERFACCIA: SWITCH PER MOSTRARE/NASCONDERE I GRAFICI ---
+# Parte disattivato (False) di default per garantire le massime prestazioni
+mostra_grafici = solara.reactive(False)
+
+@solara.component
+def PannelloGrafici(model):
+    with solara.Column():
+        solara.Switch(label="Mostra i grafici (rallenta l'app)", value=mostra_grafici)
+        if mostra_grafici.value:
+            # make_plot_component restituisce sempre (funzione, numero_di_pagina):
+            # il secondo elemento e' un intero, quindi non ci sono kwargs da estrarre.
+            for componente, _pagina in (grafico_deficit, grafico_droni, grafico_punti):
+                componente(model)
+
+
+# --- LA PAGINA ---
+modello = CoverageModel()
+
+renderer = CustomSpaceRenderer(modello, backend="matplotlib")
+renderer.setup_agents(agent_portrayal)   # stile visivo droni/punti
+renderer.post_process = configura_assi # configurazione assi e legenda
+
+
+# QUESTE DUE RIGHE SONO OBBLIGATORIE, e la loro assenza non da' nessun errore.
+# SolaraViz ridisegna cosi':
+#       if renderer.space_mesh: renderer.draw_structure()
+#       if renderer.agent_mesh: renderer.draw_agents()
+# Sono CONDIZIONALI, e space_mesh/agent_mesh nascono None: si valorizzano soltanto
+# alla prima chiamata esplicita. Senza, SolaraViz non disegna mai nulla e il pannello
+# della mappa resta bianco con gli assi di default da 0 a 1 - mentre legenda e
+# grafici funzionano regolarmente, il che rende il sintomo fuorviante.
+renderer.draw_structure()
+renderer.draw_agents()
+
+# Il nome della variabile conta: solara cerca 'page' a livello di modulo.
+# Avvio:  uv run solara run app.py
+page = SolaraViz(
+    modello,
+    renderer,
+    components=[PannelloGrafici],
+    model_params=model_params,
+    name="Copertura adattiva di punti di interesse",
+)
