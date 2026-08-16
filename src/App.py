@@ -88,28 +88,35 @@ def agent_portrayal(agent):
         )
 
     # --- DRONI ---
-    # I tre colori corrispondono esattamente alle metriche raccolte dal modello:
-    # in stazione = n_covered > 0, esplorazione = exploring, viaggio = il resto.
-    # Cosi' quello che vedi nella mappa e quello che leggi nei grafici sono la stessa
-    # grandezza, e un disaccordo fra i due segnala un errore da qualche parte.
-    if agent.n_covered > 0:
-        colore = COLORE_STAZIONE
-    elif agent.exploring:
-        colore = COLORE_ESPLORA
+    # Per il quadricottero "in stazione" e' un ruolo operativo, non la semplice
+    # coincidenza geometrica n_covered > 0. Un explorer che attraversa una coverage
+    # o un support in uscita non deve apparire falsamente stazionario.
+    if hasattr(agent, "station_role"):
+        if agent.station_role in ("owner", "support"):
+            colore = COLORE_STAZIONE
+        elif agent.exploring:
+            colore = COLORE_ESPLORA
+        else:
+            colore = COLORE_VIAGGIO
     else:
-        colore = COLORE_VIAGGIO
+        # Per l'ala fissa non esistono ruoli discreti di hovering: resta valida
+        # la classificazione geometrica originale.
+        if agent.n_covered > 0:
+            colore = COLORE_STAZIONE
+        elif agent.exploring:
+            colore = COLORE_ESPLORA
+        else:
+            colore = COLORE_VIAGGIO
+
+    # L'owner del quadricottero usa una stella: il COLORE continua a descrivere lo
+    # stato operativo, la FORMA aggiunge solo il ruolo locale di stazionamento.
+    marker_drone = "*" if getattr(agent, "owner", False) else "o"
+    dimensione_drone = 60 if getattr(agent, "owner", False) else 28
 
     return AgentPortrayalStyle(
         color=colore,
-        # CERCHIO e non triangolo, deliberatamente. Il marker a tupla di matplotlib
-        # (3, 0, angolo), che ruoterebbe un triangolo secondo la rotta, NON funziona
-        # qui: il backend di Mesa 3.5.1 raccoglie i marker in un array numpy e li
-        # confronta con ==, e una tupla manda in errore il broadcasting (verificato).
-        # Un triangolo FISSO sarebbe pero' peggio di un cerchio: sembrerebbe indicare
-        # una direzione senza indicarla, il che e' peggio che non indicarne nessuna.
-        # La rotta vera la disegna il quiver in aggiungi_livelli_extra().
-        marker="o",
-        size=28,
+        marker=marker_drone,
+        size=dimensione_drone,
         zorder=2,
         # edgecolors e linewidths vanno dati a TUTTI gli agenti o a nessuno: il backend
         # accumula solo i valori non nulli, quindi impostandoli soltanto sui punti
@@ -147,6 +154,7 @@ VOCI_LEGENDA = [
     _voce_legenda(COLORE_STAZIONE, "o", "in stazione"),
     _voce_legenda(COLORE_VIAGGIO, "o", "in viaggio"),
     _voce_legenda(COLORE_ESPLORA, "o", "esplora"),
+    _voce_legenda(COLORE_STAZIONE, "*", "owner quad"),
     # Il cerchio tratteggiato. La dicitura dice DI CHI E' il raggio, che e' la
     # lettura sbagliata da prevenire: il cerchio sta attorno al punto ma il raggio
     # e' del drone, ed e' il luogo delle posizioni da cui un drone lo presidia.
@@ -230,11 +238,40 @@ class CustomSpaceRenderer(SpaceRenderer):
                 linewidths=0.7, alpha=0.45, zorder=0,
             ))
 
-        # 4. Disegna le frecce di direzione (quiver) per i droni
-        if droni:
-            x = np.array([d.position[0] for d in droni])
-            y = np.array([d.position[1] for d in droni])
-            ang = np.radians(np.array([d.angle for d in droni]))
+        # 4. Priorita' numerica accanto a ogni punto.
+        # Usiamo scatter con marker matematico (es. "$3$") invece di ax.text:
+        # scatter crea una PathCollection, cioe' lo stesso tipo di oggetto grafico
+        # che il renderer Mesa/Matplotlib gestisce e ripulisce correttamente a ogni frame.
+        if punti:
+            offset_x = max(1.2, 0.018 * self.space.width)
+            for punto in punti:
+                x_punto = float(punto.position[0])
+                y_punto = float(punto.position[1])
+
+                # Di norma metto il numero a destra del quadrato.
+                # Vicino al bordo destro lo sposto a sinistra per non tagliarlo.
+                if x_punto + offset_x < self.space.width:
+                    x_label = x_punto + offset_x
+                else:
+                    x_label = x_punto - offset_x
+
+                ax.scatter(
+                    [x_label],
+                    [y_punto],
+                    marker=f"${int(punto.priority)}$",
+                    s=85,
+                    c="black",
+                    zorder=4,
+                )
+
+        # 5. Frecce di direzione solo per i droni che si stanno realmente muovendo.
+        # Un quadricottero in hovering conserva l'ultima direction come memoria
+        # cinematica, ma disegnarla come freccia suggerirebbe falsamente movimento.
+        droni_in_movimento = [d for d in droni if getattr(d, "moving", True)]
+        if droni_in_movimento:
+            x = np.array([d.position[0] for d in droni_in_movimento])
+            y = np.array([d.position[1] for d in droni_in_movimento])
+            ang = np.radians(np.array([d.angle for d in droni_in_movimento]))
             ax.quiver(x, y, np.cos(ang), np.sin(ang),
                       scale=45, width=0.0035, alpha=0.55, zorder=3)
 
@@ -244,12 +281,12 @@ class CustomSpaceRenderer(SpaceRenderer):
 # --- PARAMETRI REGOLABILI DALL'INTERFACCIA ---
 # I MINIMI NON SONO ARBITRARI. Spostare uno slider RICOSTRUISCE il modello da zero,
 # quindi una combinazione che viola un guardrail solleva ValueError e pianta
-# l'interfaccia. Con i parametri tenuti fissi (speed=1, vision=10, coverage_radius=8):
+# l'interfaccia. Con i parametri fissi (speed=1, coverage_radius=8):
 #     cohere         >= speed/coverage_radius = 0.125  ->  minimo 0.15   (guardrail 2)
-#     sensing_radius >= vision = 10                    ->  minimo 10.0   (guardrail 1)
-#     sensing_radius >= coverage_radius = 8            ->  gia' coperto  (guardrail 3)
-#     2*margin = 24 < 100                              ->  sempre vero   (guardrail 4)
-# Per questo speed, vision e coverage_radius NON sono esposti: renderli regolabili
+#     point_sensing_radius >= coverage_radius = 8      ->  minimo 8.0
+#     ala fissa:     2*margin = 24 < 100
+#     quadricottero: 2*quadcopter_margin = 4 < 100
+# Per questo speed e coverage_radius NON sono esposti: renderli regolabili
 # accoppierebbe i vincoli fra loro e nessuna scelta di estremi sarebbe piu' sicura.
 # Quei tre si cambiano da run_batch.py, dove un ValueError e' un'informazione utile
 # e non un'applicazione che si chiude in faccia a chi la sta usando.
@@ -258,17 +295,49 @@ model_params = {
     "n_droni": Slider("droni", value=20, min=5, max=90, step=5),
     "n_punti": Slider("punti di interesse", value=12, min=2, max=30, step=1),
     "priorita_massima": Slider("quota massima per punto", value=3, min=1, max=6, step=1),
+    "disposizione_punti": {
+        "type": "Select",
+        "value": "casuali",
+        "values": ["casuali", "gruppi", "sparsi", "cerchio", "bordi", "centrali"],
+        "label": "disposizione iniziale dei punti",
+    },
+    "tipo_drone": {
+        "type": "Select",
+        "value": "quadricottero",
+        "values": ["quadricottero", "ala_fissa"],
+        "label": "tipo di drone",
+    },
     "partenza": {
         "type": "Select",
         "value": "sparsi",
-        "values": ["sparsi", "base"],
+        "values": ["sparsi", "base", "alto", "basso", "sinistra", "destra"],
         "label": "schieramento iniziale",
     },
     "beta": Slider("beta: costo del viaggio", value=0.05, min=0.0, max=0.30, step=0.01),
     "cohere": Slider("attrazione al punto", value=0.25, min=0.15, max=0.60, step=0.05),
-    "sensing_radius": Slider("raggio di percezione dei punti", value=10.0, min=10.0, max=40.0, step=1.0),
+    "point_sensing_radius": Slider(
+        "raggio di percezione dei punti",
+        value=10.0, min=8.0, max=25.0, step=0.5,
+    ),
+    "drone_sensing_radius": Slider(
+        "raggio di comunicazione dei droni",
+        value=10.0, min=8.0, max=25.0, step=0.5,
+    ),
     "match": Slider("allineamento fra droni", value=0.05, min=0.0, max=0.20, step=0.01),
+    "separation": Slider("distanziamento tra droni vicini", value=0.015, min=0.0, max=0.05, step=0.05),
     "explore": Slider("intensita' dell'esplorazione", value=0.2, min=0.0, max=0.60, step=0.05),
+    "avoid_angle_degrees": Slider(
+        "deviazione da presidio soddisfatto",
+        value=10.0, min=0.0, max=30.0, step=1.0,
+    ),
+    "support_inset": Slider(
+        "rientro support dal bordo",
+        value=2.0, min=0.5, max=4.0, step=0.5,
+    ),
+    "release_delay_max_steps": Slider(
+        "variabilita' attesa sovraffollamento",
+        value=5, min=0, max=20, step=1,
+    ),
 }
 
 
