@@ -22,7 +22,6 @@ DISPOSIZIONI_PUNTI = (
     "centrali",
 )
 
-
 # --- CLASSE THREAD-SAFE PER LA RACCOLTA DATI ---
 class ThreadSafeDataCollector(mesa.DataCollector):
     """Versione personalizzata di DataCollector che previene le Race Conditions.
@@ -58,42 +57,43 @@ class CoverageModel(mesa.Model):
     def __init__ (
         self,
         # --- AMBIENTE: com'e' fatto il territorio ---
-        width=100.0,           # larghezza del territorio (asse x), in unita' di simulazione
-        height=100.0,          # altezza del territorio (asse y)
-        n_droni=40,            # quanti droni esistono, fisso per tutta la simulazione
-        n_punti=12,            # quanti punti di interesse creare all'inizio
-        priorita_massima=3,    # quota massima sorteggiabile: ogni punto chiedera' fra 1 e 3 droni
-        margine_punti=0.0,     # margine geometrico valido per tutte le disposizioni
+        width=100.0, # larghezza del territorio (asse x), in unita' di simulazione
+        height=100.0, # altezza del territorio (asse y)
+        n_droni=40, # quanti droni esistono, fisso per tutta la simulazione
+        n_punti=12, # quanti punti di interesse creare all'inizio
+        priorita_massima=3, # quota massima sorteggiabile: ogni punto chiedera' fra 1 e 3 droni
+        margine_punti=0.0, # stabilisce quanto devono essere tenuti lontani dai confini i centri dei punti di interesse quando vengono generati.
         disposizione_punti="casuali",  # casuali | gruppi | sparsi | cerchio | bordi | centrali
  
         # --- SCHIERAMENTO: da dove partono i droni ---
-        partenza="sparsi",     # sparsi | base | alto | basso | sinistra | destra
-        rumore_partenza=1.0,   # dispersione attorno a base/lato di partenza
+        partenza="sparsi", # sparsi | base | alto | basso | sinistra | destra
+        rumore_partenza=1.0, # dispersione attorno a base/lato di partenza
 
         # --- TIPO DI DRONE ---
-        tipo_drone="quadricottero",  # "quadricottero" | "ala_fissa"
+        tipo_drone="quadricottero", # "quadricottero" | "ala_fissa"
 
         # --- SCALA FISICA (non cambia la dinamica, la rende interpretabile) ---
         metri_per_unita=1.0,
         secondi_per_step=1.0,
  
         # --- GEOMETRIA DEL DRONE: distanze, tutte nelle stesse unita' del mondo ---
-        speed=1.0,             # quanto avanza a ogni passo
-        drone_sensing_radius=10.0,  # entro questo raggio vede/comunica con gli altri droni
-        point_sensing_radius=10.0,  # entro questo raggio percepisce i punti
-        separation=2.0,        # sotto questa distanza un altro drone e' "troppo vicino" e lo scansa
-        coverage_radius=8.0,   # entro questo raggio da un punto, il drone lo sta PRESIDIANDO
+        speed=1.0, # quanto avanza a ogni passo
+        drone_sensing_radius=10.0, # entro questo raggio vede/comunica con gli altri droni
+        point_sensing_radius=10.0, # entro questo raggio percepisce i punti
+        separation=2.0, # sotto questa distanza un altro drone e' "troppo vicino" e lo scansa
+        coverage_radius=8.0, # entro questo raggio da un punto, il drone lo sta PRESIDIANDO
  
         # --- PESI DELLE FORZE: quanto conta ciascuna spinta rispetto alle altre ---
-        cohere=0.25,           # quanto tira l'attrazione verso il punto scelto
-        separate=0.015,        # quanto spinge la separazione dai droni troppo vicini
-        match=0.05,            # quanto tira l'allineamento alla rotta media dei vicini
-        boundary=0.3,          # quanto spinge il bordo verso l'interno
-        margin=12.0,           # a che distanza dal bordo la spinta del bordo si accende
-        quadcopter_margin=2.0,  # margine ridotto: il quadricottero puo' virare sul posto
+        cohere=0.25, # quanto tira l'attrazione verso il punto scelto
+        separate=0.015, # quanto spinge la separazione dai droni troppo vicini
+        match=0.05,# quanto tira l'allineamento alla rotta media dei vicini
+        boundary=0.3, # quanto spinge il bordo verso l'interno
+        margin=12.0, # a che distanza dal bordo la spinta del bordo si accende
+        quadcopter_margin=2.0,# margine ridotto: il quadricottero puo' virare sul posto
+
         # --- DECISIONE ED ESPLORAZIONE ---
-        beta=0.05,             # costo del viaggio: quanto penalizza la distanza nella scelta del punto
-        explore=0.2,           # quanto sterza a caso quando non vede nessun punto da servire
+        beta=0.05, # costo del viaggio: quanto penalizza la distanza nella scelta del punto
+        explore=0.2, # quanto sterza a caso quando non vede nessun punto da servire
 
         # --- RILASCIO DA SOVRAFFOLLAMENTO ---
         # BaseDrone/ala fissa: massimo ritardo casuale della logica di rilascio comune.
@@ -109,12 +109,12 @@ class CoverageModel(mesa.Model):
         support_inset=2.0,
 
         raccogli_agenti=False, # Quando è True, il datacollector registra anche dati per agente
-        seed=None,             # seme casuale: stesso seed = simulazione identica
+        seed=None, # seme casuale: stesso seed = simulazione identica
     ):
         # --- SEME ---
         # In Mesa 3.5.1 si passa rng=, NON seed=: 'seed=' funziona ancora ma emette FutureWarnin.
         # Dopo questa riga esistono:
-        #   self.rng    -> numpy Generator (lo usa l'esplorazione dei droni)
+        #   self.rng -> numpy Generator (lo usa l'esplorazione dei droni)
         #   self.random -> random.Random della stdlib (lo vuole ContinuousSpace)
         # entrambi derivati dallo stesso seme: stesso seed = stessa simulazione.
         super().__init__(rng=seed)
@@ -122,9 +122,7 @@ class CoverageModel(mesa.Model):
         # --- VINCOLI DI VALIDITA' ---
 
         if tipo_drone not in DRONE_CLASS_BY_TYPE:
-            raise ValueError(
-                f"tipo_drone='{tipo_drone}' sconosciuto: usa {tuple(DRONE_CLASS_BY_TYPE)}."
-            )
+            raise ValueError(f"tipo_drone='{tipo_drone}' sconosciuto: usa {tuple(DRONE_CLASS_BY_TYPE)}.")
 
         if disposizione_punti not in DISPOSIZIONI_PUNTI:
             raise ValueError(
@@ -145,14 +143,11 @@ class CoverageModel(mesa.Model):
                 "un drone potrebbe coprire un punto senza percepirlo."
             )
 
-        # Owner e support devono potersi vedere reciprocamente. I support si
-        # fermano al raggio coverage_radius - support_inset; non e' invece
-        # necessario imporre un ordine tra i raggi di percezione di droni e punti.
+        # Owner e support devono potersi vedere reciprocamente. 
+        # I support si fermano al raggio coverage_radius - support_inset; 
+        # non e' invece necessario imporre un ordine tra i raggi di percezione di droni e punti.
         support_operating_radius = coverage_radius - support_inset
-        if (
-            tipo_drone == "quadricottero"
-            and drone_sensing_radius + 1e-9 < support_operating_radius
-        ):
+        if (tipo_drone == "quadricottero" and drone_sensing_radius + 1e-9 < support_operating_radius):
             raise ValueError(
                 f"drone_sensing_radius ({drone_sensing_radius}) < "
                 f"coverage_radius - support_inset ({support_operating_radius}): "
@@ -195,19 +190,14 @@ class CoverageModel(mesa.Model):
         if avoid_angle_degrees < 0:
             raise ValueError("avoid_angle_degrees deve essere >= 0.")
 
-        if tipo_drone == "quadricottero" and not (
-            0.0 < support_inset < coverage_radius
-        ):
-            raise ValueError(
-                "support_inset deve essere > 0 e < coverage_radius."
-            )
+        if tipo_drone == "quadricottero" and not (0.0 < support_inset < coverage_radius):
+            raise ValueError("support_inset deve essere > 0 e < coverage_radius.")
 
         # --- GEOMETRIA ---
-        # width/height devono stare SUL MODELLO perche' Drone._boundary_force() legge
-        # self.model.width / self.model.height, e il np.clip finale di Agents.py legge
-        # gli stessi due nomi. Se li chiami in un altro modo (self.larghezza...) il
-        # drone muore con AttributeError al primo step, non alla costruzione: l'errore
-        # arriva tardi e sembra scollegato dalla causa.
+        # width/height devono stare SUL MODELLO perche' Drone._boundary_force() legge self.model.width / self.model.height,
+        # e il np.clip finale di Agents.py legge gli stessi due nomi.
+        # Se li chiami in un altro modo (self.larghezza...) il drone muore con AttributeError al primo step,
+        # non alla costruzione: l'errore arriva tardi e sembra scollegato dalla causa.
         self.width = float(width)
         self.height = float(height)
         self.n_droni = int(n_droni)
@@ -228,8 +218,7 @@ class CoverageModel(mesa.Model):
 
         # --- SPAZIO CONTINUO ---
         # dimensions: una riga per asse -> [[x_min, x_max], [y_min, y_max]].
-        # L'ORIGINE DEVE ESSERE 0: _boundary_force() confronta la posizione con
-        # 'margin' assumendo che il bordo basso sia 0, e il clip usa [eps, width-eps].
+        # L'ORIGINE DEVE ESSERE 0: _boundary_force() confronta la posizione con 'margin' assumendo che il bordo basso sia 0, e il clip usa [eps, width-eps].
         # Con [[50, 150], ...] i droni si comporterebbero come se il bordo fosse a 0 -> forza di confine sbagliata e ValueError dallo spazio.
         # torus=False: territorio chiuso e delimitato (una piazza, non Pac-Man).
         # random=self.random: se lo ometti Mesa emette UserWarning e usa un RNG non seminato -> simulazione non riproducibile.
@@ -245,13 +234,9 @@ class CoverageModel(mesa.Model):
         # --- PUNTI DI INTERESSE: CONDIZIONE INIZIALE ---
         # Come per ``partenza`` dei droni, la disposizione dei punti e' una scelta
         # iniziale del mondo. Non cambia durante la simulazione.
-        #
         # Tutte le modalita' usano self.rng: stesso seed + stessi parametri = stesso
         # territorio, anche quando la geometria e' pseudo-randomica.
-        posizioni_punti = self._genera_posizioni_punti(
-            disposizione=disposizione_punti,
-            margine=margine_punti,
-        )
+        posizioni_punti = self._genera_posizioni_punti(disposizione=disposizione_punti, margine=margine_punti)
 
         # Priorita' = QUOTA ASSOLUTA di droni desiderata, quindi a VALORI INTERI
         # (il tipo resta float, e va bene cosi').
@@ -315,9 +300,7 @@ class CoverageModel(mesa.Model):
         self.zone_sovrapposte = 0
         for i in range(self.n_punti):
             for j in range(i + 1, self.n_punti):
-                d = np.linalg.norm(
-                    self.target_agents[i].position - self.target_agents[j].position
-                )
+                d = np.linalg.norm(self.target_agents[i].position - self.target_agents[j].position)
                 if d < 2.0 * coverage_radius:
                     self.zone_sovrapposte += 1
 
@@ -376,13 +359,7 @@ class CoverageModel(mesa.Model):
         # La stessa _boundary_force() viene usata dalle due piattaforme, ma con
         # margini diversi: l'ala fissa deve anticipare la virata, mentre il
         # quadricottero puo' reagire negli ultimi passi vicino al confine.
-        margine_confine = (
-            quadcopter_margin
-            if self.drone_class is QuadcopterDrone
-            else margin
-        )
-
-
+        margine_confine = (quadcopter_margin if self.drone_class is QuadcopterDrone else margin)
 
         # I parametri comuni vengono passati a entrambe le sottoclassi; il parametro
         # di deviazione dai presidi soddisfatti viene aggiunto solo al quadricottero.
@@ -404,10 +381,7 @@ class CoverageModel(mesa.Model):
             release_delay_max_steps=release_delay_max_steps,
         )
         if self.drone_class is QuadcopterDrone:
-            parametri_drone.update(
-                avoid_angle_degrees=avoid_angle_degrees,
-                support_inset=support_inset,
-            )
+            parametri_drone.update(avoid_angle_degrees=avoid_angle_degrees, support_inset=support_inset)
 
         self.drone_agents = list(
             self.drone_class.create_agents(
@@ -433,15 +407,12 @@ class CoverageModel(mesa.Model):
         self.aggiorna_occupancy()
 
         # --- RACCOLTA DATI ---
-        # I reporter sono i METODI qui sotto, passati come CoverageModel.nome (la
-        # funzione, non il suo risultato: niente parentesi). Mesa li invoca a ogni
-        # collect passando il modello. Metodi normali e non lambda per due motivi:
-        # puoi chiamarli a mano da uno script di prova, e in un traceback compare il
-        # loro nome invece di un anonimo "<lambda>".
-        # "deficit_incomprimibile" e' invece nella forma STRINGA: Mesa legge
-        # l'attributo omonimo del modello. E' una costante, ma averla ripetuta in ogni
-        # riga permette di disegnare la linea del pavimento nei grafici senza doverla
-        # recuperare a parte.
+        # I reporter sono i METODI qui sotto, passati come CoverageModel.nome (la funzione, non il suo risultato: niente parentesi).
+        # Mesa li invoca a ogni collect passando il modello. Metodi normali e non lambda per due motivi:
+        #  1) puoi chiamarli a mano da uno script di prova
+        #  2) in un traceback compare il loro nome invece di un anonimo "<lambda>".
+        # "deficit_incomprimibile" e' invece nella forma STRINGA: Mesa legge l'attributo omonimo del modello.
+        #  E' una costante, ma averla ripetuta in ogni riga permette di disegnare la linea del pavimento nei grafici senza doverla recuperare a parte.
         reporter_modello = {
             "deficit_residuo": CoverageModel.deficit_residuo,
             "deficit_normalizzato": CoverageModel.deficit_normalizzato,
@@ -453,10 +424,9 @@ class CoverageModel(mesa.Model):
             "tempo_simulato_s": "tempo_simulato_s",
         }
 
-        # I dati per singolo agente sono spenti di default: sono n_droni + n_punti
-        # righe A OGNI PASSO (52 x 600 = 31200 righe per una sola run), e in uno sweep
-        # con decine di combinazioni esplodono. Accendili quando devi ispezionare una
-        # singola simulazione, non quando ne lanci cento.
+        # I dati per singolo agente sono spenti di default: 
+        # sono n_droni + n_punti righe A OGNI PASSO (52 x 600 = 31200 righe per una sola run),
+        # e in uno sweep con decine di combinazioni esplodono. Accendili quando devi ispezionare una singola simulazione, non quando ne lanci cento.
         reporter_per_tipo = None
         if raccogli_agenti:
             reporter_drone = {
@@ -474,14 +444,10 @@ class CoverageModel(mesa.Model):
                 self.drone_class: reporter_drone,
             }
 
-        self.datacollector = ThreadSafeDataCollector(
-            model_reporters=reporter_modello,
-            agenttype_reporters=reporter_per_tipo,
-        )
+        self.datacollector = ThreadSafeDataCollector(model_reporters=reporter_modello, agenttype_reporters=reporter_per_tipo)
 
-        # Prima riga: lo stato a t=0, prima che si muova qualunque cosa. Serve come
-        # riferimento per il transitorio: senza, il primo dato che hai e' gia' il
-        # risultato di un passo e non sai da dove sei partito.
+        # Prima riga: lo stato a t=0, prima che si muova qualunque cosa.
+        # Serve come riferimento per il transitorio: senza, il primo dato che hai e' gia' il risultato di un passo e non sai da dove sei partito.
         self.datacollector.collect(self)
 
     # ------------------------------------------------------------------
@@ -516,14 +482,12 @@ class CoverageModel(mesa.Model):
                 posizioni[i, 1] = self.rng.uniform(y_min, y_max)
 
         elif disposizione == "gruppi":
-            # Tre cluster al massimo. I centri sono casuali, ma ogni cluster riceve
-            # almeno un punto quando n lo permette. La dispersione e' il 5% della
-            # dimensione piu' piccola del rettangolo disponibile.
+            # Tre cluster al massimo. I centri sono casuali, ma ogni cluster riceve almeno un punto quando n lo permette.
+            # La dispersione e' il 5% della dimensione piu' piccola del rettangolo disponibile.
             n_gruppi = min(3, n)
             centri = np.zeros((n_gruppi, 2), dtype=float)
 
-            # Evito di mettere il centro del cluster proprio sul margine, cosi' il
-            # rumore gaussiano non viene tagliato quasi tutto da un solo lato.
+            # Evito di mettere il centro del cluster proprio sul margine, cosi' il rumore gaussiano non viene tagliato quasi tutto da un solo lato.
             padding_x = 0.15 * larghezza
             padding_y = 0.15 * altezza
             for g in range(n_gruppi):
@@ -540,8 +504,7 @@ class CoverageModel(mesa.Model):
 
         elif disposizione == "sparsi":
             # Suddivido il territorio in celle e uso una sola posizione per cella.
-            # Un piccolo jitter evita una griglia perfettamente artificiale, mantenendo
-            # pero' i punti molto piu' separati rispetto alla baseline casuale.
+            # Un piccolo jitter evita una griglia perfettamente artificiale, mantenendo pero' i punti molto piu' separati rispetto alla baseline casuale.
             rapporto = larghezza / altezza
             n_colonne = max(1, int(np.ceil(np.sqrt(n * rapporto))))
             n_righe = max(1, int(np.ceil(n / n_colonne)))
@@ -569,8 +532,7 @@ class CoverageModel(mesa.Model):
 
         elif disposizione == "cerchio":
             # Punti equispaziati su una circonferenza centrata nel territorio.
-            # L'angolo iniziale e' casuale: la forma resta un cerchio, ma il seed
-            # decide la rotazione globale della configurazione.
+            # L'angolo iniziale e' casuale: la forma resta un cerchio, ma il seed decide la rotazione globale della configurazione.
             centro = np.array([(x_min + x_max) / 2.0, (y_min + y_max) / 2.0])
             raggio = 0.35 * min(larghezza, altezza)
             fase = self.rng.uniform(0.0, 2.0 * np.pi)
@@ -582,8 +544,8 @@ class CoverageModel(mesa.Model):
                 )
 
         elif disposizione == "bordi":
-            # Distribuzione vicino ai quattro bordi. Le assegnazioni ai lati vengono
-            # bilanciate e poi mischiate, cosi' non dipendono dall'indice del punto.
+            # Distribuzione vicino ai quattro bordi. 
+            # Le assegnazioni ai lati vengono bilanciate e poi mischiate, cosi' non dipendono dall'indice del punto.
             fascia = 0.08 * min(larghezza, altezza)
             lati = np.arange(n) % 4
             self.rng.shuffle(lati)
@@ -600,9 +562,8 @@ class CoverageModel(mesa.Model):
                     posizioni[i] = [self.rng.uniform(x_min, x_max), y_max - scarto]
 
         elif disposizione == "centrali":
-            # Tutti i punti cadono nel rettangolo centrale, largo/alto il 30% del
-            # territorio disponibile. E' una concentrazione centrale, non un cluster
-            # puntiforme: i punti mantengono comunque una certa dispersione.
+            # Tutti i punti cadono nel rettangolo centrale, largo/alto il 30% del territorio disponibile.
+            # E' una concentrazione centrale, non un cluster puntiforme: i punti mantengono comunque una certa dispersione.
             centro_x = (x_min + x_max) / 2.0
             centro_y = (y_min + y_max) / 2.0
             semi_x = 0.15 * larghezza
@@ -613,12 +574,12 @@ class CoverageModel(mesa.Model):
                 posizioni[i, 1] = self.rng.uniform(centro_y - semi_y, centro_y + semi_y)
 
         else:
-            # In pratica questo ramo e' protetto dal guardrail in __init__, ma tenerlo
-            # rende la funzione autonoma e piu' facile da testare direttamente.
+            # In pratica questo ramo e' protetto dal guardrail in __init__,
+            # ma tenerlo rende la funzione autonoma e piu' facile da testare direttamente.
             raise ValueError(f"disposizione punti non riconosciuta: {disposizione}")
 
-        # Sicurezza comune a tutte le modalita': il rumore di cluster/jitter non puo'
-        # portare punti fuori dal rettangolo consentito da margine_punti.
+        # Sicurezza comune a tutte le modalita':
+        # il rumore di cluster/jitter non puo' portare punti fuori dal rettangolo consentito da margine_punti.
         posizioni[:, 0] = np.clip(posizioni[:, 0], x_min, x_max)
         posizioni[:, 1] = np.clip(posizioni[:, 1], y_min, y_max)
         return posizioni
@@ -705,7 +666,8 @@ class CoverageModel(mesa.Model):
         return n
 
     def aggiorna_occupancy(self):
-        """Riconta, per ogni punto, quanti droni lo stanno presidiando adesso.
+        """
+        Riconta, per ogni punto, quanti droni lo stanno presidiando adesso.
 
         Non lo calcolano i punti da soli: il punto non sa chi ha intorno. Lo fa il
         modello, che vede tutti, e lo SCRIVE dentro ogni punto. I droni NON lo
@@ -715,41 +677,34 @@ class CoverageModel(mesa.Model):
         basta: contano esclusivamente OWNER e SUPPORT, che per politica sono fermi.
         L'ala fissa conserva invece la definizione geometrica originale.
         """
-        # Azzero prima tutti i contatori dei droni: n_covered viene ricostruito da zero
-        # a ogni passo, non incrementato all'infinito.
+        # Azzero prima tutti i contatori dei droni: n_covered viene ricostruito da zero a ogni passo, non incrementato all'infinito.
         for drone in self.drone_agents:
-            drone.n_covered = 0
+            drone.n_covered = 0 # n_covered indica quanti punti sta coprendo fisicamente quel drone.
 
         for punto in self.target_agents:
             # Una chiamata per punto: distanze da QUESTO punto a TUTTI i droni.
-            # L'array torna nello stesso ordine di self.drone_agents (verificato
-            # eseguendolo), quindi distanze[i] e' la distanza del drone i.
-            distanze, _ = self.space.calculate_distances(
-                punto.position, agents=self.drone_agents
-            )
+            # L'array torna nello stesso ordine di self.drone_agents (verificato eseguendolo), quindi distanze[i] e' la distanza del drone i.
+            distanze, _ = self.space.calculate_distances(punto.position, agents=self.drone_agents)
 
             presidianti = 0
             for i in range(len(self.drone_agents)):
                 drone = self.drone_agents[i]
 
+                # Se è fuori dalla coverage, non viene contato.
                 if distanze[i] > self.coverage_radius:
                     continue
-
-                if (
-                    self.drone_class is QuadcopterDrone
-                    and getattr(drone, "station_role", None)
-                    not in ("owner", "support")
-                ):
+                # Per i quadricotteri viene applicato anche il controllo del ruolo.
+                # Un quadricottero viene contato soltanto se: è dentro coverage_radius E station_role è owner oppure support.
+                if (self.drone_class is QuadcopterDrone and getattr(drone, "station_role", None) not in ("owner", "support")):
                     continue
 
                 presidianti += 1
-                # NOTA: un drone entro coverage_radius di DUE punti vicini conta
-                # per entrambi. Percio' la somma delle occupancy puo' superare
-                # n_droni: e' voluto (un drone in mezzo a due zone le presidia
-                # davvero entrambe), ma va ricordato leggendo le metriche.
-                drone.n_covered += 1
+                # NOTA: un drone entro coverage_radius di DUE punti vicini conta per entrambi.
+                # Percio' la somma delle occupancy puo' superaren_droni: e' voluto (un drone in mezzo a due zone le presidia davvero entrambe),
+                # ma va ricordato leggendo le metriche.
+                drone.n_covered += 1 # quanti punti sono coperti da questo drone
 
-            punto.occupancy = presidianti
+            punto.occupancy = presidianti # quanti droni coprono questo punto
 
     def step(self):
         """Uno step del mondo, esplicitamente separato in fasi.

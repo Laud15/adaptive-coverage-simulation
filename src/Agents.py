@@ -1,9 +1,7 @@
 import numpy as np
 from mesa.experimental.continuous_space import ContinuousSpaceAgent
 
-
 EPS = 1e-9
-
 
 class TargetAgent(ContinuousSpaceAgent):
     """Punto di interesse passivo.
@@ -84,7 +82,7 @@ class BaseDrone(ContinuousSpaceAgent):
         self.n_covered = 0  # ground truth, scritto dal modello
         self.exploring = False
         self.angle = float(np.degrees(np.arctan2(self.direction[1], self.direction[0])))
-        self.moving = True
+        self.moving = True # serve per la rappresentazione grafica, dice se disegnare la freccia che indica la direzione del drone
 
         # --- fotografia prodotta dalla fase PERCEIVE ---
         self.neighbors = []
@@ -122,6 +120,7 @@ class BaseDrone(ContinuousSpaceAgent):
         return np.zeros(2)
 
     def _clip_position(self, posizione):
+        """impedisce alla posizione del drone di uscire dall’area della simulazione."""
         eps = 1e-6
         limite_basso = np.array([eps, eps])
         limite_alto = np.array([self.model.width - eps, self.model.height - eps])
@@ -440,9 +439,9 @@ class QuadcopterDrone(BaseDrone):
         self.support_inset = float(support_inset)
 
         # Ruolo di stazionamento corrente e pianificato.
-        # station_role = None → drone libero/in viaggio
-        # station_role = "owner" → owner fermo al centro
-        # station_role = "support"  → support fermo nella posizione interna
+        # station_role = None -> drone libero/in viaggio
+        # station_role = "owner" -> owner fermo al centro
+        # station_role = "support"  -> support fermo nella posizione interna
         self.station_role = None  
         self.planned_station_role = None
 
@@ -452,7 +451,7 @@ class QuadcopterDrone(BaseDrone):
 
         # Stato transitorio: il drone non e' ancora SUPPORT mentre raggiunge la sua posizione radiale interna.
         # La decisione di iniziare la rilocazione resta bufferizzata tramite planned_support_relocation.
-        self.support_destination = None # support_destination → sta raggiungendo la posizione da support
+        self.support_destination = None # support_destination -> sta raggiungendo la posizione da support
         self.planned_support_relocation = False
 
         # Direzione radiale del lato dal quale il support e' entrato nella zona di copertura.
@@ -460,20 +459,20 @@ class QuadcopterDrone(BaseDrone):
 
         # Target dal quale il drone sta uscendo.
         # None significa che non siamo in DEPARTING.
-        self.departing_from = None # departing_from → sta uscendo radialmente da un punto
+        self.departing_from = None # departing_from -> sta uscendo radialmente da un punto
         self.planned_departing = False
 
         # Guida ricevuta da un drone stazionario che segnala un deficit positivo.
         # target = vedo direttamente il punto e posso applicare la politica di presidio
         # guidance_position = conosco soltanto la direzione verso un presidio comunicato e posso solo avvicinarmi
-        # planned_target e planned_guidance_position → mai entrambi presenti
-        # target e guidance_position → mai entrambi presenti dopo il commit
-        # target e planned_guidance_position → possono essere entrambi presenti temporaneamente, perché descrivono due step differenti
-        self.guidance_position = None # guidance_position → segue il richiamo di un presidio non visto direttamente
+        # planned_target e planned_guidance_position -> mai entrambi presenti
+        # target e guidance_position -> mai entrambi presenti dopo il commit
+        # target e planned_guidance_position -> possono essere entrambi presenti temporaneamente, perché descrivono due step differenti
+        self.guidance_position = None # guidance_position -> segue il richiamo di un presidio non visto direttamente
         self.planned_guidance_position = None
 
         # Posizione di un presidio soddisfatto dal quale deviare leggermente durante l'esplorazione.
-        self.avoid_position = None # avoid_position → devia leggermente da un presidio soddisfatto
+        self.avoid_position = None # avoid_position -> devia leggermente da un presidio soddisfatto
         self.planned_avoid_position = None
 
     @property
@@ -498,7 +497,7 @@ class QuadcopterDrone(BaseDrone):
         self.perceived_point_occupancies = []
         self.advertised_deficit = None
 
-        if self.station_role != "owner":
+        if self.station_role != "owner": # solo l'owner calcola il deficit
             return
 
         if self.departing_from is not None or self.target is None:
@@ -680,10 +679,12 @@ class QuadcopterDrone(BaseDrone):
 
     def _stationary_information(self):
         # _stationary_information() serve a costruire questa informazione: 
-        #   - Quali presìdi mi stanno comunicando qualcosa, e qual è il messaggio autorevole di ciascun punto?
+        #   - Quali presidi mi stanno comunicando qualcosa, e qual è il messaggio autorevole di ciascun punto?
         # Il risultato contiene al massimo un messaggio per ciascun punto,
         # anche se il drone vede owner e più support dello stesso presidio.
-        """Raccoglie e deduplica geometricamente i messaggi dei presidi vicini."""
+        """Raccoglie e filtra i messaggi sovrapposti dei presidi vicini.
+            MASSIMO un messaggio per ogni punto
+        """
 
         # Qui verranno inseriti i messaggi validi. Ogni elemento descrive un presidio, non semplicemente un drone.
         informazioni = []
@@ -704,7 +705,7 @@ class QuadcopterDrone(BaseDrone):
                 continue
 
             deficit = vicino._deficit_to_share()
-            #NB: riguardo a vicino._deficit_to_share() val che: 
+            #NB: riguardo a vicino._deficit_to_share() vale che: 
             # Se vicino è l’owner: restituisce il deficit calcolato e pubblicato dall’owner stesso
             # Se vicino è un support: individua geometricamente l’owner del proprio punto e restituisce il deficit pubblicato dall’owner
             # Quindi il support non comunica una propria stima. Fa solamente da ripetitore
@@ -714,8 +715,6 @@ class QuadcopterDrone(BaseDrone):
 
             informazione = {
                 "drone": vicino,
-                # La guida e la deviazione riguardano il centro del presidio,
-                # non la posizione istantanea del drone che inoltra il dato.
                 "position": vicino.target.position.copy(),
                 "priority": vicino.target.priority,
                 "deficit": deficit,
@@ -739,7 +738,7 @@ class QuadcopterDrone(BaseDrone):
             esistente = informazioni[indice_esistente]
             preferisci_nuova = (
                 informazione["source_is_owner"] and not esistente["source_is_owner"] # Viene scelto l’owner perché rappresenta la fonte diretta e autorevole.
-            ) or ( # se i caso le origini delle fonte provangano da entrambi owner o entrambi support si preferisce quella del drone più vicino a noi
+            ) or ( # se in caso le origini delle fonti provengono da entrambi owner o entrambi support si preferisce quella del drone più vicino a noi
                 (informazione["source_is_owner"] == esistente["source_is_owner"]) and (informazione["distance"] < esistente["distance"])
             )
 
@@ -851,7 +850,7 @@ class QuadcopterDrone(BaseDrone):
             return
 
         # 1) PRIMA I PUNTI. 
-        # Per ogni punto gia' presidiato il deficit comunicato dall'owner sostituisce completamente la stima individuale.
+        # Per ogni punto gia' presidiato il deficit è comunicato dall'owner del punto.
         informazioni_punti = self._direct_point_information()
 
         punti_utili = []
@@ -900,8 +899,8 @@ class QuadcopterDrone(BaseDrone):
 
         
         # Questo blocco viene raggiunto solamente quando il drone ha già verificato che:
-        # 1) non esistono punti percepiti utili
-        # 2) non esistono richiami da droni stazionari con deficit > 0
+        #   1) non esistono punti percepiti utili
+        #   2) non esistono richiami da droni stazionari con deficit > 0
         # il drone deve quindi esplorare, ma potrebbe conoscere dei punti già soddisfatti da evitare
 
         self.planned_target = None
@@ -947,18 +946,18 @@ class QuadcopterDrone(BaseDrone):
             -DEPARTING
             -rilocazione verso SUPPORT
         """
-
+        # questi sono i valori che decide_station andrà a settare
         self.planned_station_role = None # Ruolo che il drone avrà dopo il commit
-        self.planned_departing = False  # Deve iniziare l’abbandono del presidio
-        self.planned_support_relocation = False # Deve raggiungere la posizione interna da support
+        self.planned_departing = False  # Deve iniziare l’abbandono del presidio?
+        self.planned_support_relocation = False # Deve raggiungere la posizione interna da support?
 
-        # Sono già in uscita? → non decido ruoli
+        # Sono già in uscita? -> non decido ruoli
         if self.departing_from is not None:
             return
 
         # Sto raggiungendo la posizione support?
-        # → se sono arrivato, divento support
-        # → altrimenti continuo la rilocazione
+        # -> se sono arrivato, divento support
+        # -> altrimenti continuo la rilocazione
         if self.support_destination is not None:
             distanza_destinazione = np.linalg.norm(self.position - self.support_destination)
             if distanza_destinazione <= EPS:
@@ -966,29 +965,28 @@ class QuadcopterDrone(BaseDrone):
             return
 
         # Sono owner?
-        # → risolvo eventuali conflitti
-        # → se vinco rimango owner
-        # → se perdo mi riloco come support
+        # -> risolvo eventuali conflitti
+        # -> se vinco rimango owner
+        # -> se perdo mi riloco come support
         if self.station_role == "owner":
             if self._target_is_still_perceived(self.target):
                 owner_eletto = self._find_owner_for_point(self.target)
 
-                if owner_eletto is self:
+                if owner_eletto is self: # VITTORIA
                     # L'owner non abbandona mai per sovraffollamento.
                     self.planned_station_role = "owner"
-                elif owner_eletto is not None:
-                    # Un owner perdente lascia il centro e raggiunge la posizione
-                    # radiale interna prima di diventare SUPPORT.
+                elif owner_eletto is not None: # SCONFITTA
+                    # Un owner perdente lascia il centro e raggiunge la posizione radiale interna prima di diventare SUPPORT.
                     self.planned_support_relocation = True
 
                 self._reset_release_wait() # Un owner non deve conservare alcun timer di abbandono.
             return
 
         # Sono support?
-        # → se esiste l’owner, controllo il suo deficit:
-        #   → deficit non negativo: rimango
-        #   → deficit negativo: attesa e possibile partenza
-        # → se l’owner non esiste, ricado nell’elezione
+        # -> se esiste l’owner, controllo il suo deficit:
+        #   -> deficit non negativo: rimango
+        #   -> deficit negativo: attesa e possibile partenza
+        # -> se l’owner non esiste, ricado nell’elezione
         if self.station_role == "support":
             owner = self._find_owner_for_point(self.target)
 
@@ -1000,14 +998,16 @@ class QuadcopterDrone(BaseDrone):
                     self.planned_departing = True # pianifica l’inizio dell’uscita
 
                 return
+            # Owner non trovato: non facciamo return.
+            # Il vecchio support prosegue nella normale elezione.
 
         punto = self.planned_target
         # Da questo momento la funzione gestisce: droni liberi diretti verso un punto, vecchi support rimasti senza owner.
         # Usa planned_target, non target, perché deve lavorare con la decisione appena presa da decide_target().
 
         # Ho un planned_target?
-        #→ no: nessuna elezione
-        #→ sì: controllo se sono dentro la coverage
+        # -> no: nessuna elezione
+        # -> sì: controllo se sono dentro la coverage
         if punto is None:
             return
 
@@ -1018,8 +1018,8 @@ class QuadcopterDrone(BaseDrone):
             return 
         
         # Dentro la coverage esiste già un owner?
-        # → sì: mi riloco come support
-        # → no: confronto tutti i candidati
+        # -> sì: mi riloco come support
+        # -> no: confronto tutti i candidati
         owner_esistente = self._find_owner_for_point(punto)
 
         if owner_esistente is not None:
@@ -1049,15 +1049,15 @@ class QuadcopterDrone(BaseDrone):
             if distanza_vicino <= self.coverage_radius:
                 candidati.append(vicino)
 
-        vincitore = min(candidati,key=lambda drone: (np.linalg.norm(drone.position - punto.position), drone.unique_id))
+        vincitore = min(candidati, key=lambda drone: (np.linalg.norm(drone.position - punto.position), drone.unique_id))
 
         distanza_vincitore = np.linalg.norm(vincitore.position - punto.position)
 
         # Il miglior candidato è al centro?
-        # → no: continuiamo ad avvicinarci
-        # → sì:
-        #   → vincitore: owner
-        #   → altri: rilocazione support
+        # -> no: continuiamo ad avvicinarci
+        # -> sì:
+        #   -> vincitore: owner
+        #   -> altri: rilocazione support
         if distanza_vincitore > EPS:
             return
 
@@ -1112,6 +1112,7 @@ class QuadcopterDrone(BaseDrone):
         #   -un owner perde un conflitto tra più owner.
         # Il drone non diventa subito support. Prima deve raggiungere la posizione radiale interna.
         if self.planned_support_relocation:
+
             if self.planned_target is None:
                 raise RuntimeError("Rilocazione SUPPORT pianificata senza planned_target.")
             
@@ -1195,23 +1196,35 @@ class QuadcopterDrone(BaseDrone):
         self.moving = False
 
     def _move_exactly_towards_position(self, destination):
-        """Muove senza overshoot verso una posizione geometrica."""
+        """
+            Muove verso una posizione geometrica.
+            In caso la distanza dal punto sia minore del passo ci si muove solo della distanza per evitare di sforare
+        """
+        # calcola vettore e distanza dalla destinazione
         delta = destination - self.position
         distanza = np.linalg.norm(delta)
 
+        # se si è già arrivati ci si ferma
         if distanza <= EPS:
             self.moving = False
             return True
 
+        # Altrimenti orienta il drone esattamente verso la destinazione
         self.direction = delta / distanza
+        # Il passo viene limitato alla distanza rimanente
         passo = min(self.speed, distanza)
+
         self.position = self._clip_position(self.position + self.direction * passo)
         self._update_angle()
         self.moving = passo > EPS
         return distanza <= self.speed + EPS
 
     def _finish_center_approach(self):
-        """Aggancia esattamente il centro quando il candidato e' a un passo."""
+        """
+        Aggancia esattamente il centro quando il candidato e' a un passo.
+        - se restituisce False, non ha effettuato alcun movimento;
+        - se effettua il movimento, restituisce sempre True.
+        """
         if self.target is None:
             return False
 
@@ -1221,32 +1234,36 @@ class QuadcopterDrone(BaseDrone):
         if distanza > self.speed + EPS:
             return False
 
-        return self._move_exactly_towards_position(self.target.position)
+        return self._move_exactly_towards_position(self.target.position) 
 
     # ------------------------------------------------------------------
     # Uscita dalla coverage
     # ------------------------------------------------------------------
 
     def _move_departure(self):
+        # recupera il punto che si sta abbandonando
         punto = self.departing_from
 
         if punto is None:
             return
 
+        # in caso entry_direction mancasse, si ricalcola
         if self.entry_direction is None:
-            delta = self.position - punto.position
+            self._remember_entry_direction(punto)
 
-            self.entry_direction = self._normalize(delta, fallback=self.direction)
-
+        # Il drone assume esattamente la direzione radiale d’ingresso
         self.direction = self._normalize(self.entry_direction,fallback=self.direction)
 
+        # Si sposta di un passo lungo quella direzione.
         self.position = self._clip_position(self.position + self.direction * self.speed)
 
+        # per la rappresentazione grafica nell'app
         self._update_angle()
         self.moving = True
 
         distanza = np.linalg.norm(self.position - punto.position)
 
+        # si controlla se si è usciti dalla zona di presidio
         if distanza > self.coverage_radius:
             self.departing_from = None
             self.entry_direction = None
@@ -1281,8 +1298,7 @@ class QuadcopterDrone(BaseDrone):
 
         verso_presidio = delta / distanza
 
-        # Se stiamo gia' andando dalla parte opposta,
-        # non serve deviare ulteriormente.
+        # Se stiamo gia' andando dalla parte opposta, non serve deviare ulteriormente.
         if np.dot(self.direction, verso_presidio) <= 0:
             return self.direction.copy()
 
@@ -1294,8 +1310,7 @@ class QuadcopterDrone(BaseDrone):
         sinistra = np.array([(cos * dx) - (sin * dy), (sin * dx) + (cos * dy)])
         destra = np.array([(cos * dx) + (sin * dy), (-sin * dx) + (cos * dy)])
 
-        # Scegliamo la rotazione meno diretta
-        # verso il presidio soddisfatto.
+        # Scegliamo la rotazione meno diretta verso il presidio soddisfatto.
         if (np.dot(sinistra, verso_presidio) < np.dot(destra, verso_presidio)):
             return sinistra
 
@@ -1306,25 +1321,42 @@ class QuadcopterDrone(BaseDrone):
     # ------------------------------------------------------------------
 
     def move(self):
+
+        """
+        move() esegue lo stato corrente prodotto da commit_decision(),
+        per questo utilizza target, guidance_position, station_role, departing_from e support_destination, 
+        non i rispettivi campi planned_*.
+        La priorità dei rami è:
+            1. Uscita dal presidio
+            2. Rilocazione come support
+            3. Owner/support già stazionario
+            4. Aggancio finale al centro
+            5. Volo normale
+        """
         # Stato transitorio di uscita.
         if self.departing_from is not None:
             self._move_departure()
             return
 
-        # Prima di diventare SUPPORT il drone raggiunge la posizione radiale interna, 
-        # sia arrivando dal bordo sia retrocedendo dal centro.
+        # Questo stato si verifica quando il drone:
+        # è entrato nella coverage;
+        # ha trovato un owner esistente, oppure ha perso l’elezione;
+        # deve raggiungere la propria posizione interna da support.
+        # Finché non arriva, non è ancora support: è un drone in rilocazione.
         if self.support_destination is not None:
             self._move_exactly_towards_position(self.support_destination)
             return
 
-        # Un drone che presidia e' immobile: niente separazione,
-        #  rientro verso il centro o altro movimento interno alla coverage.
+        # Un drone che presidia e' immobile: 
+        # niente separazione, rientro verso il centro o altro movimento interno alla coverage.
         if self.station_role in ("owner", "support"):
             self._hold_station()
             return
 
         # Un punto ancora senza owner richiede che il candidato raggiunga il centro prima dell'elezione. 
         # Lo snap finale evita overshoot/oscillazioni dovute al passo di lunghezza costante.
+        # False: non è stato eseguito l’aggancio; continua con il volo normale;
+        # True: il drone è stato portato al centro; termina move().
         if self.target is not None and self._finish_center_approach():
             return
 
@@ -1351,6 +1383,6 @@ class QuadcopterDrone(BaseDrone):
 
         self._update_angle()
 
-        self.position = self._clip_position(self.position + self.direction * self.speed)
+        self.position = self._clip_position(self.position + (self.direction * self.speed))
 
         self.moving = True
