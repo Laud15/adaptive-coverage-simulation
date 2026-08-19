@@ -4,10 +4,10 @@ from mesa.experimental.continuous_space import ContinuousSpaceAgent
 EPS = 1e-9
 
 class TargetAgent(ContinuousSpaceAgent):
-    """Punto di interesse passivo.
+    """Passive point of interest.
 
-    ``occupancy`` e' la ground truth calcolata dal modello. I droni non la leggono
-    per decidere: serve a metriche e visualizzazione.
+    ``occupancy`` is the ground truth calculated by the model. Drones do not read it
+    to make decisions: it is used for metrics and visualization.
     """
 
     def __init__(self, model, space, position, priority=1.0):
@@ -21,19 +21,19 @@ class TargetAgent(ContinuousSpaceAgent):
 
 
 class BaseDrone(ContinuousSpaceAgent):
-    """Comportamento comune a tutte le piattaforme UAV del modello.
+    """Behavior shared by all UAV platforms in the model.
 
-    Qui vivono solo le parti che ala fissa e quadricottero condividono:
-      * percezione di punti e droni;
-      * comunicazione locale entro ``drone_sensing_radius``;
-      * stima locale dell'occupancy tramite comunicazione;
-      * scelta del target;
-      * separazione, allineamento, confine ed esplorazione.
+    This class contains only the parts shared by fixed-wing drones and quadcopters:
+      * perception of points and drones;
+      * local communication within ``drone_sensing_radius``;
+      * local occupancy estimation through communication;
+      * target selection;
+      * separation, alignment, boundary avoidance, and exploration.
 
-    La cinematica e la politica di stazionamento appartengono alle sottoclassi.
+    Kinematics and stationing policies belong to the subclasses.
     """
 
-    tipo_drone = "base"
+    drone_type = "base"
 
     def __init__(
         self,
@@ -42,29 +42,29 @@ class BaseDrone(ContinuousSpaceAgent):
         position=(0, 0),
         direction=(1, 1),
         speed=1.0,
-        drone_sensing_radius=10.0, # il raggio entro cui il drone vede e comunica con altri droni
-        point_sensing_radius=25.0, # il raggio di percezione dei punti
-        separation=2.0, # Sotto questa distanza si attiva la separazione
-        coverage_radius=8.0, # raggio da cui il drone inizia a coprire un punto
-        cohere=0.25, # attrazione verso la destinazione
-        separate=0.015, # allontanamento dai droni troppo vicini
-        match=0.05, # allineamento alle direzioni dei vicini
-        boundary=0.3, # repulsione dai bordi
-        margin=20.0, # Distanza dal confine alla quale comincia ad agire _boundary_force()
-        beta=0.05, # penalizza la distanza nella scelta della destinazioen del drone, utilità = deficit - beta * distanza
-        explore=0.2, # Controlla la variabilità casuale della direzione durante l’esplorazione
-        release_delay_max_steps=5, # È l’ampiezza della componente casuale dell’attesa prima dell’uscita per sovraffollamento
+        drone_sensing_radius=10.0, # radius within which the drone sees and communicates with other drones
+        point_sensing_radius=25.0, # point sensing radius
+        separation=2.0, # Separation activates below this distance
+        coverage_radius=8.0, # radius within which the drone starts covering a point
+        cohere=0.25, # attraction toward the destination
+        separate=0.015, # repulsion from drones that are too close
+        match=0.05, # alignment with neighbors' directions
+        boundary=0.3, # repulsion from boundaries
+        margin=20.0, # Distance from the boundary at which _boundary_force() starts acting
+        beta=0.05, # penalizes distance when selecting the drone's destination, utility = deficit - beta * distance
+        explore=0.2, # Controls random direction variability during exploration
+        release_delay_max_steps=5, # Amplitude of the random component of the wait before leaving due to overcrowding
     ):
         super().__init__(space=space, model=model)
 
-        # --- stato geometrico iniziale ---
+        # --- initial geometric state ---
         self.position = np.array(position, dtype=float)
         self.direction = np.array(direction, dtype=float)
         self.direction = self._normalize(self.direction, fallback=[1.0, 0.0])
 
-        # --- parametri comuni ---
+        # --- shared parameters ---
         self.speed = float(speed)
-        self.drone_sensing_radius = float(drone_sensing_radius)  # = communication_radius per ipotesi di modello
+        self.drone_sensing_radius = float(drone_sensing_radius)  # = communication_radius by model assumption
         self.point_sensing_radius = float(point_sensing_radius)
         self.separation = float(separation)
         self.coverage_radius = float(coverage_radius)
@@ -77,162 +77,162 @@ class BaseDrone(ContinuousSpaceAgent):
         self.explore_factor = float(explore)
         self.release_delay_max_steps = int(release_delay_max_steps)
 
-        # --- stato corrente osservabile ---
+        # --- observable current state ---
         self.target = None
-        self.n_covered = 0  # ground truth, scritto dal modello
+        self.n_covered = 0  # ground truth, written by the model
         self.exploring = False
         self.angle = float(np.degrees(np.arctan2(self.direction[1], self.direction[0])))
-        self.moving = True # serve per la rappresentazione grafica, dice se disegnare la freccia che indica la direzione del drone
+        self.moving = True # used for graphical representation, determines whether to draw the arrow showing the drone's direction
 
-        # --- fotografia prodotta dalla fase PERCEIVE ---
+        # --- snapshot produced by the PERCEIVE phase ---
         self.neighbors = []
         self.neighbor_distances = []
         self.perceived_points = []
         self.perceived_point_distances = []
 
-        # Stima locale dell'occupancy, allineata a ``perceived_points``.
-        # Nessun identificatore del punto entra nella conoscenza del drone:
-        # perceived_point_occupancies[k] riguarda semplicemente perceived_points[k]
-        # nella fotografia locale dello step corrente.
+        # Local occupancy estimate, aligned with ``perceived_points``.
+        # No point identifier enters the drone's knowledge:
+        # perceived_point_occupancies[k] simply refers to perceived_points[k]
+        # in the local snapshot of the current step.
         self.perceived_point_occupancies = []
 
-        # --- decisione current/next state ---
+        # --- current/next state decision ---
         self.planned_target = None
         self.planned_exploring = False
 
-        # --- attesa casuale prima di lasciare un punto sovraffollato ---
-        # None = non e' attiva nessuna attesa. Quando parte, il valore viene estratto
-        # una sola volta e decrementato a ogni step finche' il sovraffollamento persiste.
+        # --- random wait before leaving an overcrowded point ---
+        # None = no wait is active. When it starts, the value is drawn
+        # only once and decremented at each step while overcrowding persists.
         self.release_wait_remaining = None
 
     # ------------------------------------------------------------------
-    # GEOMETRIA DI BASE
+    # BASE GEOMETRY
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _normalize(vettore, fallback=None):
-        vettore = np.array(vettore, dtype=float)
-        norma = np.linalg.norm(vettore)
-        if norma > EPS:
-            return vettore / norma
+    def _normalize(vector, fallback=None):
+        vector = np.array(vector, dtype=float)
+        magnitude = np.linalg.norm(vector)
+        if magnitude > EPS:
+            return vector / magnitude
         if fallback is not None:
             return np.array(fallback, dtype=float)
         return np.zeros(2)
 
-    def _clip_position(self, posizione):
-        """impedisce alla posizione del drone di uscire dall’area della simulazione."""
+    def _clip_position(self, position):
+        """Prevents the drone position from leaving the simulation area."""
         eps = 1e-6
-        limite_basso = np.array([eps, eps])
-        limite_alto = np.array([self.model.width - eps, self.model.height - eps])
-        return np.clip(posizione, limite_basso, limite_alto)
+        lower_bound = np.array([eps, eps])
+        upper_bound = np.array([self.model.width - eps, self.model.height - eps])
+        return np.clip(position, lower_bound, upper_bound)
 
     def _update_angle(self):
         self.angle = float(np.degrees(np.arctan2(self.direction[1], self.direction[0])))
 
     def _boundary_force(self):
-        """Forza che mantiene il drone entro i bordi."""
-        forza = np.zeros(2)
-        for indice, dim_massima in enumerate((self.model.width, self.model.height)):
-            pos_attuale = self.position[indice]
-            if pos_attuale < self.margin:
-                forza[indice] = (self.margin - pos_attuale) / self.margin
-            elif pos_attuale > (dim_massima - self.margin):
-                forza[indice] = (dim_massima - self.margin - pos_attuale) / self.margin
-        return forza * self.boundary_factor
+        """Force that keeps the drone within the boundaries."""
+        force = np.zeros(2)
+        for index, max_dimension in enumerate((self.model.width, self.model.height)):
+            current_position = self.position[index]
+            if current_position < self.margin:
+                force[index] = (self.margin - current_position) / self.margin
+            elif current_position > (max_dimension - self.margin):
+                force[index] = (max_dimension - self.margin - current_position) / self.margin
+        return force * self.boundary_factor
 
     # ------------------------------------------------------------------
-    # FASE 1 - PERCEZIONE
+    # PHASE 1 - PERCEPTION
     # ------------------------------------------------------------------
 
     def perceive(self):
-        """Costruisce una fotografia locale senza modificare altri agenti."""
-        # I due raggi hanno semantiche indipendenti. La query deve quindi coprire
-        # il maggiore dei due e i risultati vengono filtrati per tipo sotto.
+        """Builds a local snapshot without modifying other agents."""
+        # The two radii have independent semantics. The query must therefore cover
+        # the larger of the two, and the results are filtered by type below.
         
-        raggio_query = max(self.point_sensing_radius, self.drone_sensing_radius)
-        agenti, distanze = self.get_neighbors_in_radius(radius=raggio_query)
+        query_radius = max(self.point_sensing_radius, self.drone_sensing_radius)
+        agents, distances = self.get_neighbors_in_radius(radius=query_radius)
 
         self.neighbors = []
         self.neighbor_distances = []
         self.perceived_points = []
         self.perceived_point_distances = []
 
-        for agente, distanza in zip(agenti, distanze):
-            if isinstance(agente, BaseDrone) and distanza <= self.drone_sensing_radius:
-                self.neighbors.append(agente)
-                self.neighbor_distances.append(float(distanza))
-            elif (isinstance(agente, TargetAgent) and distanza <= self.point_sensing_radius):
-                self.perceived_points.append(agente)
-                self.perceived_point_distances.append(float(distanza))
+        for agent, distance in zip(agents, distances):
+            if isinstance(agent, BaseDrone) and distance <= self.drone_sensing_radius:
+                self.neighbors.append(agent)
+                self.neighbor_distances.append(float(distance))
+            elif (isinstance(agent, TargetAgent) and distance <= self.point_sensing_radius):
+                self.perceived_points.append(agent)
+                self.perceived_point_distances.append(float(distance))
 
-        # L'occupancy percepita viene costruita nella fase COMMUNICATE, usando
-        # soltanto i droni con cui posso comunicare in questo step.
+        # Perceived occupancy is built during the COMMUNICATE phase, using
+        # only the drones with which communication is possible in this step.
         self.perceived_point_occupancies = []
 
     # ------------------------------------------------------------------
-    # FASE 2 - COMUNICAZIONE
+    # PHASE 2 - COMMUNICATION
     # ------------------------------------------------------------------
 
     def communicate(self):
-        """Stima localmente quanti droni stanno coprendo ciascun punto percepito.
+        """Locally estimates how many drones are covering each perceived point.
 
-        La comunicazione resta volutamente ad alto livello: nessun pacchetto,
-        protocollo o identificatore globale del punto. Per ogni punto che IO
-        percepisco, conto me stesso (se lo copro) e i soli droni entro ``drone_sensing_radius``
-        la cui posizione comunicata cade entro ``coverage_radius`` da quel punto.
+        Communication deliberately remains high-level: no packets,
+        protocols, or global point identifiers. For each point that I
+        perceive, I count myself (if I cover it) and only the drones within ``drone_sensing_radius``
+        whose communicated position falls within ``coverage_radius`` of that point.
 
-        In questo modo due punti vicini non vengono associati tramite un ID condiviso:
-        la stima nasce ogni step dalla geometria della mia fotografia locale.
+        This way, two nearby points are not associated through a shared ID:
+        the estimate is rebuilt at each step from the geometry of my local snapshot.
         """
         self.perceived_point_occupancies = []
 
-        for punto, mia_distanza in zip(self.perceived_points, self.perceived_point_distances):
-            conteggio = 1 if mia_distanza <= self.coverage_radius else 0
+        for point, my_distance in zip(self.perceived_points, self.perceived_point_distances):
+            count = 1 if my_distance <= self.coverage_radius else 0
 
-            for vicino in self.neighbors:
-                distanza_vicino_punto = np.linalg.norm(vicino.position - punto.position) #per fare questo si assume che i droni comunichino la loro posizione in maniera accurata
-                if distanza_vicino_punto <= self.coverage_radius:
-                    conteggio += 1
+            for neighbor in self.neighbors:
+                neighbor_point_distance = np.linalg.norm(neighbor.position - point.position) #this assumes that drones communicate their position accurately
+                if neighbor_point_distance <= self.coverage_radius:
+                    count += 1
 
-            self.perceived_point_occupancies.append(conteggio)
+            self.perceived_point_occupancies.append(count)
 
     # ------------------------------------------------------------------
-    # FASE 3 - SCELTA DEL TARGET
+    # PHASE 3 - TARGET SELECTION
     # ------------------------------------------------------------------
 
-    def _estimated_occupancy(self, punto):
-        """Restituisce la stima associata alla detection locale di ``punto``.
+    def _estimated_occupancy(self, point):
+        """Returns the estimate associated with the local detection of ``point``.
 
-        Il confronto ``is`` non e' un identificatore comunicato: serve soltanto
-        internamente, nello stesso step, per ritrovare nella fotografia locale
-        l'oggetto TargetAgent che il drone sta gia' considerando.
+        The ``is`` comparison is not a communicated identifier: it is used only
+        internally, within the same step, to retrieve from the local snapshot
+        the TargetAgent object that the drone is already considering.
         """
-        for candidato, occupancy in zip(self.perceived_points, self.perceived_point_occupancies):
-            if candidato is punto:
+        for candidate, occupancy in zip(self.perceived_points, self.perceived_point_occupancies):
+            if candidate is point:
                 return occupancy
         return 0
 
-    def _perceived_deficit(self, punto, distanza):
-        deficit = punto.priority - self._estimated_occupancy(punto)
+    def _perceived_deficit(self, point, distance):
+        deficit = point.priority - self._estimated_occupancy(point)
 
-        # se sto gia' coprendo il punto, valuto quanti droni mancherebbero DOPO la mia eventuale partenza.
-        if distanza <= self.coverage_radius:
+        # If I am already covering the point, evaluate how many drones would be missing AFTER my possible departure.
+        if distance <= self.coverage_radius:
             deficit += 1
         return deficit
 
-    def _distance_to_perceived_point(self, punto):
-        for candidato, distanza in zip(self.perceived_points, self.perceived_point_distances):
-            if candidato is punto:
-                return distanza
+    def _distance_to_perceived_point(self, point):
+        for candidate, distance in zip(self.perceived_points, self.perceived_point_distances):
+            if candidate is point:
+                return distance
         return None
 
     def _current_target_is_overcrowded(self):
-        """True solo se sto coprendo il mio target e la stima dice occupancy > priority."""
+        """True only if I am covering my target and the estimate says occupancy > priority."""
         if self.target is None:
             return False
 
-        distanza = self._distance_to_perceived_point(self.target)
-        if distanza is None or distanza > self.coverage_radius:
+        distance = self._distance_to_perceived_point(self.target)
+        if distance is None or distance > self.coverage_radius:
             return False
 
         return self._estimated_occupancy(self.target) > self.target.priority
@@ -241,120 +241,120 @@ class BaseDrone(ContinuousSpaceAgent):
         self.release_wait_remaining = None
 
     def _apply_random_release_wait(self, candidate_target):
-        """Ritarda l'uscita da un target sovraffollato.
+        """Delays departure from an overcrowded target.
 
-        Questa funzione viene chiamata solo quando abbiamo gia' stabilito che:
-        - esiste un target corrente;
-        - il nuovo candidato e' diverso dal target corrente;
-        - il target corrente e' percepito come sovraffollato.
+        This function is called only after establishing that:
+        - a current target exists;
+        - the new candidate differs from the current target;
+        - the current target is perceived as overcrowded.
         """
 
-        # Estraggo il ritardo una sola volta.
+        # Draw the delay only once.
         if self.release_wait_remaining is None:
             if self.release_delay_max_steps > 0:
                 self.release_wait_remaining = int( self.model.rng.integers(1, self.release_delay_max_steps + 1) )
             else:
                 self.release_wait_remaining = 0
 
-        # Finche' il timer non e' terminato rimango sul target corrente.
+        # Stay on the current target until the timer expires.
         if self.release_wait_remaining > 0:
             self.release_wait_remaining -= 1
             return self.target
 
-        # Timer terminato: posso applicare la nuova decisione.
+        # Timer expired: the new decision can be applied.
         return candidate_target
 
     def decide_target(self):
-        """Sceglie il target usando solo informazione percepita/comunicata."""
-        migliore_utilita = -np.inf
-        migliore_target = None
+        """Selects the target using only perceived/communicated information."""
+        best_utility = -np.inf
+        best_target = None
 
-        for punto, distanza in zip(self.perceived_points, self.perceived_point_distances):
-            deficit = self._perceived_deficit(punto, distanza)
+        for point, distance in zip(self.perceived_points, self.perceived_point_distances):
+            deficit = self._perceived_deficit(point, distance)
             if deficit <= 0:
                 continue
 
-            utilita = deficit - self.beta * distanza
-            if utilita > migliore_utilita:
-                migliore_utilita = utilita
-                migliore_target = punto
+            utility = deficit - self.beta * distance
+            if utility > best_utility:
+                best_utility = utility
+                best_target = point
 
-        sta_lasciando_target = ( self.target is not None and migliore_target is not self.target )
+        leaving_target = ( self.target is not None and best_target is not self.target )
 
-        if sta_lasciando_target and self._current_target_is_overcrowded():
-            migliore_target = self._apply_random_release_wait(migliore_target)
+        if leaving_target and self._current_target_is_overcrowded():
+            best_target = self._apply_random_release_wait(best_target)
         else:
             self._reset_release_wait()
 
-        self.planned_target = migliore_target
-        self.planned_exploring = migliore_target is None
+        self.planned_target = best_target
+        self.planned_exploring = best_target is None
 
     # ------------------------------------------------------------------
-    # FASE 4 - POLITICA DI STAZIONAMENTO
+    # PHASE 4 - STATIONING POLICY
     # ------------------------------------------------------------------
 
     def decide_station(self):
-        """Hook comune: l'ala fissa non ha una politica di stazionamento discreta."""
+        """Shared hook: the fixed-wing drone has no discrete stationing policy."""
         pass
 
     # ------------------------------------------------------------------
-    # FASE 5 - COMMIT DELLA DECISIONE
+    # PHASE 5 - DECISION COMMIT
     # ------------------------------------------------------------------
 
     def commit_decision(self):
-        """Trasforma lo stato pianificato nello stato corrente."""
-        target_precedente = self.target
+        """Transforms the planned state into the current state."""
+        previous_target = self.target
         self.target = self.planned_target
         self.exploring = self.planned_exploring
 
-        if self.target is not target_precedente:
+        if self.target is not previous_target:
             self._reset_release_wait()
 
     # ------------------------------------------------------------------
-    # FORZE COMUNI
+    # SHARED FORCES
     # ------------------------------------------------------------------
 
     def _separation_force(self):
-        """Componente Boids che allontana dai vicini sotto ``separation``."""
-        numero_vicini = len(self.neighbors)
-        if numero_vicini == 0:
+        """Boids component that moves away from neighbors within ``separation``."""
+        neighbor_count = len(self.neighbors)
+        if neighbor_count == 0:
             return np.zeros(2)
 
-        delta_vicini = self.space.calculate_difference_vector(
+        neighbor_deltas = self.space.calculate_difference_vector(
             self.position, agents=self.neighbors
         )
 
         separation_vector = np.zeros(2)
-        numero_vicini_separation = 0
+        separation_neighbor_count = 0
 
 
-        for i in range(numero_vicini):
+        for i in range(neighbor_count):
             if self.neighbor_distances[i] < self.separation:
-                separation_vector -= delta_vicini[i]
-                numero_vicini_separation += 1
+                separation_vector -= neighbor_deltas[i]
+                separation_neighbor_count += 1
 
-        # Nessun vicino abbastanza vicino da attivare la separazione.
-        if numero_vicini_separation == 0:
+        # No neighbor is close enough to activate separation.
+        if separation_neighbor_count == 0:
             return np.zeros(2)
 
-        # Manteniamo la stessa normalizzazione del contributo presente nel codice
-        # originale: la somma viene mediata sul numero totale di vicini in drone_sensing_radius.
-        return (separation_vector * self.separate_factor) / numero_vicini_separation
+        # Keep the same contribution normalization used in the original
+        # code: the sum is averaged over the total number of neighbors within drone_sensing_radius.
+        return (separation_vector * self.separate_factor) / separation_neighbor_count
 
     def _alignment_force(self):
-        """Componente Boids che tende ad allineare la rotta a quella dei vicini."""
-        numero_vicini = len(self.neighbors)
-        if numero_vicini == 0:
+        """Boids component that tends to align the route with the neighbors' routes."""
+        neighbor_count = len(self.neighbors)
+        if neighbor_count == 0:
             return np.zeros(2)
 
-        somma_direzioni = np.zeros(2)
-        for vicino in self.neighbors:
-            somma_direzioni += vicino.direction
+        direction_sum = np.zeros(2)
+        for neighbor in self.neighbors:
+            direction_sum += neighbor.direction
 
-        return (somma_direzioni * self.match_factor) / numero_vicini
+        return (direction_sum * self.match_factor) / neighbor_count
 
     def _neighbor_force(self):
-        """Comodita' per il volo normale: separazione + allineamento."""
+        """Convenience method for normal flight: separation + alignment."""
         return self._separation_force() + self._alignment_force()
 
     def _target_attraction(self):
@@ -362,30 +362,30 @@ class BaseDrone(ContinuousSpaceAgent):
             return np.zeros(2)
 
         delta = self.target.position - self.position
-        distanza = np.linalg.norm(delta)
-        if distanza <= EPS:
+        distance = np.linalg.norm(delta)
+        if distance <= EPS:
             return np.zeros(2)
-        return (delta / distanza) * self.cohere_factor
+        return (delta / distance) * self.cohere_factor
 
     def _rotated_exploration_direction(self):
-        angolo = self.model.rng.normal(0, self.explore_factor)
-        cos = np.cos(angolo)
-        sin = np.sin(angolo)
+        angle = self.model.rng.normal(0, self.explore_factor)
+        cos = np.cos(angle)
+        sin = np.sin(angle)
         dx, dy = self.direction
         return np.array([(cos * dx) - (sin * dy), (sin * dx) + (cos * dy)])
 
     # ------------------------------------------------------------------
-    # FASE 6 - MOVIMENTO: contratto per le sottoclassi
+    # PHASE 6 - MOVEMENT: subclass contract
     # ------------------------------------------------------------------
 
     def move(self):
-        raise NotImplementedError("La cinematica deve essere implementata dalla sottoclasse.")
+        raise NotImplementedError("Kinematics must be implemented by the subclass.")
 
 
 class FixedWingDrone(BaseDrone):
-    """Drone ad ala fissa: velocita' costante e sterzata progressiva."""
+    """Fixed-wing drone: constant speed and progressive steering."""
 
-    tipo_drone = "ala_fissa"
+    drone_type = "fixed_wing"
 
     def move(self):
         
@@ -395,23 +395,23 @@ class FixedWingDrone(BaseDrone):
         steer += self._boundary_force()
 
         if self.exploring:
-            direzione_ruotata = self._rotated_exploration_direction()
-            steer += direzione_ruotata - self.direction
+            rotated_direction = self._rotated_exploration_direction()
+            steer += rotated_direction - self.direction
 
-        # La nuova rotta nasce dalla rotta precedente + steer: e' qui che compare
-        # la sterzata progressiva e, di conseguenza, il vincolo di raggio di virata.
+        # The new route is the previous route plus steer: this is where progressive
+        # steering appears and, consequently, the turning-radius constraint.
         self.direction = self._normalize((self.direction + steer), fallback=self.direction)
-        self._update_angle() # serve per la visualizzazione su solara, non impatta il movimento
+        self._update_angle() # used for Solara visualization, does not affect movement
         self.position = self._clip_position(self.position + self.direction * self.speed)
         self.moving = True
 
 
 class QuadcopterDrone(BaseDrone):
-    """Quadricottero con ruoli FREE / OWNER / SUPPORT / DEPARTING.
-        Sovrascrive i metodi communicate(), decide_target(), decide_station(), commit_decision() e move() di BaseDrone
+    """Quadcopter with FREE / OWNER / SUPPORT / DEPARTING roles.
+        Overrides BaseDrone's communicate(), decide_target(), decide_station(), commit_decision(), and move() methods
     """
 
-    tipo_drone = "quadricottero"
+    drone_type = "quadcopter"
 
     def __init__(
         self,
@@ -427,52 +427,52 @@ class QuadcopterDrone(BaseDrone):
             **kwargs,
         )
 
-        # i vari planned_* rappresentano le decisioni future, 
-        # si usano per evitare che l'ordine di esecuzione dei droni vada a incidere sul comportamento.
-        # come regola si assume che: Un drone non deve leggere un campo che gli altri potrebbero ancora modificare nella stessa fase.
+        # The various planned_* fields represent future decisions, 
+        # and prevent drone execution order from affecting behavior.
+        # The rule is: a drone must not read a field that others might still modify during the same phase.
 
-        # Piccola deviazione usata quando un presidio vicino comunica di essere gia' soddisfatto.
+        # Small deviation used when a nearby station reports that it is already satisfied.
         self.avoid_angle = np.deg2rad(float(avoid_angle_degrees))
 
-        # Distanza di sicurezza dal bordo della coverage alla quale si fermano i support.
-        # Il raggio operativo e' coverage_radius - support_inset.
+        # Safety distance from the coverage boundary at which supports stop.
+        # The operating radius is coverage_radius - support_inset.
         self.support_inset = float(support_inset)
 
-        # Ruolo di stazionamento corrente e pianificato.
-        # station_role = None -> drone libero/in viaggio
-        # station_role = "owner" -> owner fermo al centro
-        # station_role = "support"  -> support fermo nella posizione interna
+        # Current and planned stationing role.
+        # station_role = None -> free/traveling drone
+        # station_role = "owner" -> owner stationary at the center
+        # station_role = "support"  -> support stationary at the inner position
         self.station_role = None  
         self.planned_station_role = None
 
-        # Valore pubblicato esclusivamente dall'owner durante communicate().
-        # Support ed explorer non costruiscono una propria stima del deficit.
+        # Value published exclusively by the owner during communicate().
+        # Supports and explorers do not build their own deficit estimate.
         self.advertised_deficit = None
 
-        # Stato transitorio: il drone non e' ancora SUPPORT mentre raggiunge la sua posizione radiale interna.
-        # La decisione di iniziare la rilocazione resta bufferizzata tramite planned_support_relocation.
-        self.support_destination = None # support_destination -> sta raggiungendo la posizione da support
+        # Transitional state: the drone is not yet a SUPPORT while reaching its inner radial position.
+        # The decision to start relocation remains buffered through planned_support_relocation.
+        self.support_destination = None # support_destination -> moving toward the support position
         self.planned_support_relocation = False
 
-        # Direzione radiale del lato dal quale il support e' entrato nella zona di copertura.
+        # Radial direction of the side from which the support entered the coverage zone.
         self.entry_direction = None
 
-        # Target dal quale il drone sta uscendo.
-        # None significa che non siamo in DEPARTING.
-        self.departing_from = None # departing_from -> sta uscendo radialmente da un punto
+        # Target that the drone is leaving.
+        # None means that the drone is not DEPARTING.
+        self.departing_from = None # departing_from -> moving radially away from a point
         self.planned_departing = False
 
-        # Guida ricevuta da un drone stazionario che segnala un deficit positivo.
-        # target = vedo direttamente il punto e posso applicare la politica di presidio
-        # guidance_position = conosco soltanto la direzione verso un presidio comunicato e posso solo avvicinarmi
-        # planned_target e planned_guidance_position -> mai entrambi presenti
-        # target e guidance_position -> mai entrambi presenti dopo il commit
-        # target e planned_guidance_position -> possono essere entrambi presenti temporaneamente, perché descrivono due step differenti
-        self.guidance_position = None # guidance_position -> segue il richiamo di un presidio non visto direttamente
+        # Guidance received from a stationary drone reporting a positive deficit.
+        # target = I directly see the point and can apply the stationing policy
+        # guidance_position = I only know the direction toward a reported station and can only approach it
+        # planned_target and planned_guidance_position -> never both present
+        # target and guidance_position -> never both present after the commit
+        # target and planned_guidance_position -> may both be temporarily present because they describe two different steps
+        self.guidance_position = None # guidance_position -> follows the call of a station that is not directly visible
         self.planned_guidance_position = None
 
-        # Posizione di un presidio soddisfatto dal quale deviare leggermente durante l'esplorazione.
-        self.avoid_position = None # avoid_position -> devia leggermente da un presidio soddisfatto
+        # Position of a satisfied station from which to deviate slightly during exploration.
+        self.avoid_position = None # avoid_position -> deviates slightly from a satisfied station
         self.planned_avoid_position = None
 
     @property
@@ -480,24 +480,24 @@ class QuadcopterDrone(BaseDrone):
         return self.station_role == "owner"
 
     # ------------------------------------------------------------------
-    # Comunicazione del quadricottero
+    # Quadcopter communication
     # ------------------------------------------------------------------
 
     def communicate(self):
-        """Fa calcolare e pubblicare il deficit soltanto all'owner.
+        """Makes only the owner calculate and publish the deficit.
 
-        FREE e SUPPORT non stimano l'occupancy del presidio. L'owner, fermo al
-        centro, conta se stesso e i soli OWNER/SUPPORT visibili che ricadono nella
-        coverage del proprio target. Il risultato viene pubblicato in
-        ``advertised_deficit`` e sara' letto o inoltrato dagli altri droni nelle
-        fasi decisionali successive.
+        FREE and SUPPORT do not estimate station occupancy. The owner, stationary at the
+        center, counts itself and only the visible OWNER/SUPPORT drones that fall within
+        its target's coverage. The result is published in
+        ``advertised_deficit`` and will be read or relayed by other drones in the
+        subsequent decision phases.
         """
-        # Il campo ereditato resta necessario a BaseDrone/FixedWingDrone, ma non
-        # viene usato dalla politica del quadricottero.
+        # The inherited field remains necessary for BaseDrone/FixedWingDrone, but is not
+        # used by the quadcopter policy.
         self.perceived_point_occupancies = []
         self.advertised_deficit = None
 
-        if self.station_role != "owner": # solo l'owner calcola il deficit
+        if self.station_role != "owner": # only the owner calculates the deficit
             return
 
         if self.departing_from is not None or self.target is None:
@@ -506,166 +506,166 @@ class QuadcopterDrone(BaseDrone):
         if not self._target_is_still_perceived(self.target):
             return
 
-        mia_distanza = np.linalg.norm(self.position - self.target.position)
-        if mia_distanza > self.coverage_radius:
+        my_distance = np.linalg.norm(self.position - self.target.position)
+        if my_distance > self.coverage_radius:
             return
 
-        # L'owner conta se stesso.
+        # The owner counts itself.
         occupancy = 1
 
-        for vicino in self.neighbors:
-            if not isinstance(vicino, QuadcopterDrone):
+        for neighbor in self.neighbors:
+            if not isinstance(neighbor, QuadcopterDrone):
                 continue
-            if vicino.station_role not in ("owner", "support"):
+            if neighbor.station_role not in ("owner", "support"):
                 continue
-            if vicino.departing_from is not None:
+            if neighbor.departing_from is not None:
                 continue
 
-            distanza_vicino_punto = np.linalg.norm(vicino.position - self.target.position)
-            if distanza_vicino_punto <= self.coverage_radius:
+            neighbor_point_distance = np.linalg.norm(neighbor.position - self.target.position)
+            if neighbor_point_distance <= self.coverage_radius:
                 occupancy += 1
 
         self.advertised_deficit = self.target.priority - occupancy
 
     # ------------------------------------------------------------------
-    # Associazione geometrica dei punti
+    # Geometric point association
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _same_point(punto_a, punto_b):
-        """Due punti sono considerati uguali tramite la loro posizione."""
-        if punto_a is None or punto_b is None:
+    def _same_point(point_a, point_b):
+        """Two points are considered equal through their position."""
+        if point_a is None or point_b is None:
             return False
 
-        return (np.linalg.norm(punto_a.position - punto_b.position) <= EPS)
+        return (np.linalg.norm(point_a.position - point_b.position) <= EPS)
 
     def _target_is_still_perceived(self, target):
-        """Controlla geometricamente se il target e' ancora percepito."""
+        """Geometrically checks whether the target is still perceived."""
         if target is None:
             return False
 
-        for punto in self.perceived_points:
-            if self._same_point(punto, target):
+        for point in self.perceived_points:
+            if self._same_point(point, target):
                 return True
 
         return False
 
     # ------------------------------------------------------------------
-    # Punti attualmente coperti
+    # Currently covered points
     # ------------------------------------------------------------------
 
     def _covered_perceived_points(self):
-        """Punti percepiti entro coverage_radius."""
-        coperti = []
+        """Perceived points within coverage_radius."""
+        covered = []
 
-        for punto, distanza in zip(
+        for point, distance in zip(
             self.perceived_points,
             self.perceived_point_distances,
         ):
-            if distanza <= self.coverage_radius:
-                coperti.append((punto, distanza))
+            if distance <= self.coverage_radius:
+                covered.append((point, distance))
 
-        return coperti
+        return covered
 
     # ------------------------------------------------------------------
-    # Owner e deficit del presidio
+    # Station owner and deficit
     # ------------------------------------------------------------------
 
-    def _owners_for_point(self, punto):
-        """Owner visibili associati geometricamente a ``punto``.
-        L'oggetto o l'ID del punto non vengono comunicati o confrontati: ogni
-        associazione nasce dalla coincidenza geometrica delle posizioni.
+    def _owners_for_point(self, point):
+        """Visible owners geometrically associated with ``point``.
+        The point object or ID is neither communicated nor compared: every
+        association arises from the geometric coincidence of positions.
         """
         owners = []
 
-        if (self.station_role == "owner" and self.departing_from is None and self._same_point(self.target, punto)):
+        if (self.station_role == "owner" and self.departing_from is None and self._same_point(self.target, point)):
             owners.append(self)
 
-        for vicino in self.neighbors:
-            if not isinstance(vicino, QuadcopterDrone):
+        for neighbor in self.neighbors:
+            if not isinstance(neighbor, QuadcopterDrone):
                 continue
-            if vicino.station_role != "owner":
+            if neighbor.station_role != "owner":
                 continue
-            if vicino.departing_from is not None:
+            if neighbor.departing_from is not None:
                 continue
-            if self._same_point(vicino.target, punto):
-                owners.append(vicino)
+            if self._same_point(neighbor.target, point):
+                owners.append(neighbor)
 
         return owners
 
-    def _find_owner_for_point(self, punto):
-        """Restituisce l'owner autorevole del presidio, se visibile.
+    def _find_owner_for_point(self, point):
+        """Returns the authoritative station owner, if visible.
 
-        Se esistono piu' owner, tutti i droni che li vedono calcolano lo stesso
-        vincitore: prima il piu' vicino al centro e, a parita', il drone con
-        ``unique_id`` minore.
+        If multiple owners exist, all drones that see them calculate the same
+        winner: first the one closest to the center and, in case of a tie, the drone with
+        the lower ``unique_id``.
         """
-        owners = self._owners_for_point(punto)
+        owners = self._owners_for_point(point)
 
         if not owners:
             return None
 
         return min(
             owners,
-            key = lambda drone: (np.linalg.norm(drone.position - punto.position), drone.unique_id)
+            key = lambda drone: (np.linalg.norm(drone.position - point.position), drone.unique_id)
         )
 
     def _direct_point_information(self):
-        """Valuta prima di tutto i punti percepiti.
+        """Evaluates perceived points first.
 
-        Per un punto presidiato il deficit dell'owner e' l'unica autorita'. Un
-        punto senza owner resta invece candidabile e l'elezione avverra' solo
-        dopo l'ingresso nella sua coverage.
+        For a staffed point, the owner's deficit is the only authority. A
+        point without an owner remains eligible, and the election occurs only
+        after entering its coverage.
         """
-        informazioni = []
+        information = []
 
-        for punto, distanza in zip(self.perceived_points, self.perceived_point_distances):
-            owner = self._find_owner_for_point(punto)
-            deficit_owner = None
+        for point, distance in zip(self.perceived_points, self.perceived_point_distances):
+            owner = self._find_owner_for_point(point)
+            owner_deficit = None
 
             if owner is not None:
-                deficit_owner = owner._station_deficit()
+                owner_deficit = owner._station_deficit()
 
-            informazioni.append(
+            information.append(
                 {
-                    "point": punto,
-                    "distance": distanza,
+                    "point": point,
+                    "distance": distance,
                     "owner": owner,
-                    "owner_deficit": deficit_owner,
+                    "owner_deficit": owner_deficit,
                 }
             )
 
-        return informazioni
+        return information
 
     @staticmethod
     def _direct_point_rank(info):
-        """Necessità, priorità e distanza per scegliere un punto utile."""
-        punto = info["point"]
+        """Need, priority, and distance used to select a useful point."""
+        point = info["point"]
         deficit = info["owner_deficit"]
 
-        # Per un punto ancora senza owner non esiste un deficit autorevole: 
-        # la priorita' rappresenta la domanda iniziale del nuovo presidio.
-        necessita = punto.priority if deficit is None else deficit
+        # No authoritative deficit exists for a point without an owner: 
+        # priority represents the initial demand of the new station.
+        need = point.priority if deficit is None else deficit
 
-        return (necessita, punto.priority, -info["distance"])
+        return (need, point.priority, -info["distance"])
 
     def _station_deficit(self):
-        """Restituisce il deficit pubblicato dall'owner in communicate()."""
+        """Returns the deficit published by the owner in communicate()."""
         if self.station_role != "owner":
             return None
 
         return self.advertised_deficit
     
     def _deficit_to_share(self):
-        """Informazione che un drone stazionario comunica a un explorer."""
+        """Information that a stationary drone communicates to an explorer."""
         if self.station_role not in ("owner", "support"):
             return None
 
         if self.target is None:
             return None
 
-        # Anche un owner che sta per perdere un conflitto inoltra il deficit
-        # dell'owner autorevole, non la propria stima concorrente.
+        # Even an owner that is about to lose a conflict relays the deficit
+        # of the authoritative owner, not its own competing estimate.
         owner = self._find_owner_for_point(self.target)
 
         if owner is None:
@@ -674,120 +674,120 @@ class QuadcopterDrone(BaseDrone):
         return owner._station_deficit()
 
     # ------------------------------------------------------------------
-    # Informazione ricevuta dai droni stazionari
+    # Information received from stationary drones
     # ------------------------------------------------------------------
 
     def _stationary_information(self):
-        # _stationary_information() serve a costruire questa informazione: 
-        #   - Quali presidi mi stanno comunicando qualcosa, e qual è il messaggio autorevole di ciascun punto?
-        # Il risultato contiene al massimo un messaggio per ciascun punto,
-        # anche se il drone vede owner e più support dello stesso presidio.
-        """Raccoglie e filtra i messaggi sovrapposti dei presidi vicini.
-            MASSIMO un messaggio per ogni punto
+        # _stationary_information() builds this information: 
+        #   - Which stations are communicating with me, and what is each point's authoritative message?
+        # The result contains at most one message for each point,
+        # even if the drone sees the owner and multiple supports of the same station.
+        """Collects and filters overlapping messages from nearby stations.
+            AT MOST one message for each point
         """
 
-        # Qui verranno inseriti i messaggi validi. Ogni elemento descrive un presidio, non semplicemente un drone.
-        informazioni = []
+        # Valid messages are inserted here. Each element describes a station, not merely a drone.
+        information = []
 
-        for vicino, distanza in zip(self.neighbors, self.neighbor_distances):
-            if not isinstance(vicino, QuadcopterDrone):
+        for neighbor, distance in zip(self.neighbors, self.neighbor_distances):
+            if not isinstance(neighbor, QuadcopterDrone):
                 continue
 
-            if vicino.station_role not in ("owner", "support"):
+            if neighbor.station_role not in ("owner", "support"):
                 continue
 
-            # Esclude un drone che sta abbandonando il presidio.
-            if vicino.departing_from is not None:
+            # Exclude a drone that is leaving the station.
+            if neighbor.departing_from is not None:
                 continue
 
-            # Esclude un drone che non ha un punto di riferimento associato
-            if vicino.target is None:
+            # Exclude a drone with no associated reference point
+            if neighbor.target is None:
                 continue
 
-            deficit = vicino._deficit_to_share()
-            #NB: riguardo a vicino._deficit_to_share() vale che: 
-            # Se vicino è l’owner: restituisce il deficit calcolato e pubblicato dall’owner stesso
-            # Se vicino è un support: individua geometricamente l’owner del proprio punto e restituisce il deficit pubblicato dall’owner
-            # Quindi il support non comunica una propria stima. Fa solamente da ripetitore
+            deficit = neighbor._deficit_to_share()
+            # NOTE: neighbor._deficit_to_share() behaves as follows: 
+            # If the neighbor is the owner: it returns the deficit calculated and published by that owner
+            # If the neighbor is a support: it geometrically identifies its point's owner and returns the deficit published by the owner
+            # Therefore, the support does not communicate its own estimate. It only acts as a relay
 
             if deficit is None:
                 continue
 
-            informazione = {
-                "drone": vicino,
-                "position": vicino.target.position.copy(),
-                "priority": vicino.target.priority,
+            message = {
+                "drone": neighbor,
+                "position": neighbor.target.position.copy(),
+                "priority": neighbor.target.priority,
                 "deficit": deficit,
-                "distance": distanza,
-                "source_is_owner": vicino.station_role == "owner",
+                "distance": distance,
+                "source_is_owner": neighbor.station_role == "owner",
             }
 
-            indice_esistente = None
-            for indice, esistente in enumerate(informazioni):
-                if (np.linalg.norm(esistente["position"] - informazione["position"])<= EPS):
-                    indice_esistente = indice
+            existing_index = None
+            for index, existing in enumerate(information):
+                if (np.linalg.norm(existing["position"] - message["position"])<= EPS):
+                    existing_index = index
                     break
 
-            # se il punto non è ancora presente, il messaggio viene aggiunto perchè è il primo ricevuto per quel presidio
-            if indice_esistente is None:
-                informazioni.append(informazione)
+            # If the point is not yet present, add the message because it is the first received for that station
+            if existing_index is None:
+                information.append(message)
                 continue
 
-            # se esiste già un messaggio per quel punto: 
-            # bisogna decidere se mantenere il messaggio già memorizzato oppure sostituirlo con quello nuovo.
-            esistente = informazioni[indice_esistente]
-            preferisci_nuova = (
-                informazione["source_is_owner"] and not esistente["source_is_owner"] # Viene scelto l’owner perché rappresenta la fonte diretta e autorevole.
-            ) or ( # se in caso le origini delle fonti provengono da entrambi owner o entrambi support si preferisce quella del drone più vicino a noi
-                (informazione["source_is_owner"] == esistente["source_is_owner"]) and (informazione["distance"] < esistente["distance"])
+            # If a message for that point already exists: 
+            # decide whether to keep the stored message or replace it with the new one.
+            existing = information[existing_index]
+            prefer_new = (
+                message["source_is_owner"] and not existing["source_is_owner"] # Choose the owner because it is the direct, authoritative source.
+            ) or ( # If both sources are owners or both are supports, prefer the drone closest to us
+                (message["source_is_owner"] == existing["source_is_owner"]) and (message["distance"] < existing["distance"])
             )
 
-            if preferisci_nuova:
-                informazioni[indice_esistente] = informazione
+            if prefer_new:
+                information[existing_index] = message
 
-        return informazioni
+        return information
 
     # ------------------------------------------------------------------
-    # Timer per il sovraffollamento
+    # Overcrowding timer
     # ------------------------------------------------------------------
 
     def _draw_overcrowding_wait(self):
-        """Estrae il tempo di attesa di un support sovraffollato."""
+        """Draws the waiting time of an overcrowded support."""
         if self.target is None:
             return 0
 
-        distanza = np.linalg.norm(self.position - self.target.position)
+        distance = np.linalg.norm(self.position - self.target.position)
 
-        distanza_da_uscire = max(0.0, self.coverage_radius - distanza)
+        exit_distance = max(0.0, self.coverage_radius - distance)
 
-        tempo_minimo = max(1,int(np.ceil(distanza_da_uscire/ max(self.speed, EPS))))
+        minimum_wait = max(1,int(np.ceil(exit_distance/ max(self.speed, EPS))))
 
-        # 1 vicino al centro, 0 vicino al bordo.
-        profondita = np.clip(1.0 - (distanza / self.coverage_radius), 0.0, 1.0)
+        # 1 near the center, 0 near the boundary.
+        depth = np.clip(1.0 - (distance / self.coverage_radius), 0.0, 1.0)
 
-        extra_massimo = int(np.ceil(self.release_delay_max_steps* profondita))
+        maximum_extra_wait = int(np.ceil(self.release_delay_max_steps* depth))
 
-        # Anche vicino al bordo lasciamo un piccolo
-        # intervallo pseudocasuale, se il parametro lo permette.
+        # Even near the boundary, keep a small
+        # pseudorandom interval if the parameter allows it.
         if self.release_delay_max_steps > 0:
-            extra_massimo = max(1, extra_massimo)
+            maximum_extra_wait = max(1, maximum_extra_wait)
 
-        if extra_massimo == 0:
-            return tempo_minimo
+        if maximum_extra_wait == 0:
+            return minimum_wait
 
-        return int(self.model.rng.integers(tempo_minimo,tempo_minimo + extra_massimo + 1))
+        return int(self.model.rng.integers(minimum_wait,minimum_wait + maximum_extra_wait + 1))
 
     def _support_should_depart(self, owner):
-        """Gestisce l'attesa del support in caso di sovraffollamento."""
+        """Manages the support's waiting period in case of overcrowding."""
         deficit = owner._station_deficit()
 
-        # Nessuna informazione affidabile oppure punto non sovraffollato.
+        # No reliable information, or the point is not overcrowded.
         if deficit is None or deficit >= 0:
             self._reset_release_wait()
             return False
 
-        # Primo step nel quale rileviamo il sovraffollamento: 
-        # estraiamo il timer una volta sola e iniziamo l'attesa dallo step successivo.
+        # First step in which overcrowding is detected: 
+        # draw the timer only once and start waiting from the next step.
         if self.release_wait_remaining is None:
             self.release_wait_remaining = (self._draw_overcrowding_wait())
             return False
@@ -797,196 +797,196 @@ class QuadcopterDrone(BaseDrone):
             if self.release_wait_remaining > 0:
                 return False
 
-        # Il timer e' terminato: rileggiamo esplicitamente il deficit corrente
-        # dell'owner e partiamo soltanto se il sovraffollamento persiste.
-        deficit_finale = owner._station_deficit()
+        # The timer has expired: explicitly reread the owner's current deficit
+        # and depart only if overcrowding persists.
+        final_deficit = owner._station_deficit()
 
-        if deficit_finale is not None and deficit_finale < 0:
+        if final_deficit is not None and final_deficit < 0:
             return True
 
         self._reset_release_wait()
         return False
 
     # ------------------------------------------------------------------
-    # Decisione del target
+    # Target decision
     # ------------------------------------------------------------------
 
     def decide_target(self):
-        """Pianifica la destinazione del quadricottero usando informazioni locali.
+        """Plans the quadcopter destination using local information.
 
-        Mantiene eventuali transizioni già in corso; altrimenti valuta prima i punti
-        percepiti, usando il deficit dell'owner come informazione autorevole, e poi i
-        messaggi dei droni stazionari. Se non trova richieste utili, pianifica
-        l'esplorazione con un'eventuale deviazione dai presidi soddisfatti.
-        La decisione viene salvata nei campi planned_* e applicata nel commit.
+        Preserves any ongoing transitions; otherwise, it first evaluates perceived
+        points, using the owner's deficit as authoritative information, and then the
+        messages from stationary drones. If it finds no useful requests, it plans
+        exploration with a possible deviation from satisfied stations.
+        The decision is stored in the planned_* fields and applied during the commit.
         """
         self.planned_guidance_position = None
         self.planned_avoid_position = None
 
-        # È già stato stabilito che questo drone deve diventare support.
-        # Gli è stata assegnata una posizione interna alla copertura, ma non l’ha ancora raggiunta.
+        # It has already been established that this drone must become a support.
+        # It has been assigned an inner coverage position but has not reached it yet.
         if self.support_destination is not None:
             self.planned_target = self.target
             self.planned_exploring = False
             return
 
-        # Durante l'uscita non scegliamo nuove destinazioni.
+        # Do not select new destinations during departure.
         if self.departing_from is not None:
             self.planned_target = None
             self.planned_exploring = False
             return
 
-        # OWNER e SUPPORT mantengono il proprio presidio finche' il punto continua ad esistere.
+        # OWNER and SUPPORT retain their station while the point continues to exist.
         if self.station_role in ("owner", "support"):
             if self._target_is_still_perceived(self.target):
                 self.planned_target = self.target
                 self.planned_exploring = False
                 return
 
-            # Il punto non e' piu' percepito.
+            # The point is no longer perceived.
             self.planned_target = None
             self.planned_exploring = True
             self._reset_release_wait()
             return
 
-        # 1) PRIMA I PUNTI. 
-        # Per ogni punto gia' presidiato il deficit è comunicato dall'owner del punto.
-        informazioni_punti = self._direct_point_information()
+        # 1) POINTS FIRST. 
+        # For each staffed point, the deficit is communicated by the point's owner.
+        point_information = self._direct_point_information()
 
-        punti_utili = []
-        punti_da_evitare = []
+        useful_points = []
+        points_to_avoid = []
 
-        for info in informazioni_punti:
+        for info in point_information:
             owner = info["owner"]
-            deficit_owner = info["owner_deficit"]
+            owner_deficit = info["owner_deficit"]
 
             if owner is None:
-                # Un punto senza owner puo' essere scelto. 
-                # L'owner verra' eletto solo quando il drone sara' realmente entro coverage_radius.
-                punti_utili.append(info)
-            elif deficit_owner is not None and deficit_owner > 0:
-                punti_utili.append(info)
+                # A point without an owner can be selected. 
+                # The owner will be elected only when the drone is actually within coverage_radius.
+                useful_points.append(info)
+            elif owner_deficit is not None and owner_deficit > 0:
+                useful_points.append(info)
             else:
-                # deficit <= 0 (o temporaneamente non disponibile): non si
-                # ricalcola localmente; il presidio viene soltanto evitato.
-                punti_da_evitare.append(info)
+                # deficit <= 0 (or temporarily unavailable): do not
+                # recalculate it locally; only avoid the station.
+                points_to_avoid.append(info)
 
-        if punti_utili:
-            scelta = max(punti_utili, key=lambda info: self._direct_point_rank(info))
+        if useful_points:
+            choice = max(useful_points, key=lambda info: self._direct_point_rank(info))
 
-            self.planned_target = scelta["point"]
+            self.planned_target = choice["point"]
             self.planned_exploring = False
             self._reset_release_wait()
             return
 
-        # 2) POI I DRONI. 
-        # Solo in assenza di un punto direttamente utile si considerano i messaggi dei presidi stazionari vicini.
-        informazioni_stazionarie = self._stationary_information()
-        # si filtrano tutte le informazione di punti con deficit > 0
-        richieste = [info for info in informazioni_stazionarie if info["deficit"] > 0]
+        # 2) DRONES SECOND. 
+        # Consider messages from nearby stationary drones only when there is no directly useful point.
+        stationary_information = self._stationary_information()
+        # Filter all point information with deficit > 0
+        requests = [info for info in stationary_information if info["deficit"] > 0]
 
-        if richieste:
-            scelta = max(
-                richieste,
+        if requests:
+            choice = max(
+                requests,
                 key=lambda info: (info["deficit"], info["priority"], -info["distance"])
             )
 
             self.planned_target = None
             self.planned_exploring = False
-            self.planned_guidance_position = scelta["position"].copy()
+            self.planned_guidance_position = choice["position"].copy()
             self._reset_release_wait()
             return
 
         
-        # Questo blocco viene raggiunto solamente quando il drone ha già verificato che:
-        #   1) non esistono punti percepiti utili
-        #   2) non esistono richiami da droni stazionari con deficit > 0
-        # il drone deve quindi esplorare, ma potrebbe conoscere dei punti già soddisfatti da evitare
+        # This block is reached only after the drone has verified that:
+        #   1) no useful perceived points exist
+        #   2) no calls from stationary drones with deficit > 0 exist
+        # The drone must therefore explore, but it may know of satisfied points to avoid
 
         self.planned_target = None
         self.planned_exploring = True
         self._reset_release_wait()
 
-        # mettiamo i dati di punti_da_evitare nello stesso formato di candidati_avoid
-        candidati_avoid = [
+        # Put points_to_avoid data in the same format as avoid_candidates
+        avoid_candidates = [
             {
                 "position": info["point"].position,
                 "priority": info["point"].priority,
                 "distance": info["distance"],
             }
-            for info in punti_da_evitare
+            for info in points_to_avoid
         ]
 
         
-        candidati_avoid.extend(
+        avoid_candidates.extend(
             {
                 "position": info["position"],
                 "priority": info["priority"],
                 "distance": np.linalg.norm(self.position - info["position"])
             }
-            for info in informazioni_stazionarie if info["deficit"] <= 0
+            for info in stationary_information if info["deficit"] <= 0
         )
 
 
-        if candidati_avoid:
-            # come posizione da evitare si sceglie quella del punto più vicino, a pairtà di vicinanza si evita il punto con priorità maggiore
-            scelta_avoid = max(candidati_avoid, key=lambda info: (-info["distance"], info["priority"]))  
-            self.planned_avoid_position = scelta_avoid["position"].copy()
+        if avoid_candidates:
+            # Select the nearest point as the position to avoid; at equal distance, avoid the higher-priority point
+            avoid_choice = max(avoid_candidates, key=lambda info: (-info["distance"], info["priority"]))  
+            self.planned_avoid_position = avoid_choice["position"].copy()
 
     # ------------------------------------------------------------------
-    # Elezione OWNER / SUPPORT
+    # OWNER / SUPPORT election
     # ------------------------------------------------------------------
 
     def decide_station(self):
         """
-        Decide quale ruolo di presidio il drone dovrà avere dopo il commit_decision():
+        Decides which stationing role the drone must have after commit_decision():
             -FREE
             -OWNER
             -SUPPORT
             -DEPARTING
-            -rilocazione verso SUPPORT
+            -relocation toward SUPPORT
         """
-        # questi sono i valori che decide_station andrà a settare
-        self.planned_station_role = None # Ruolo che il drone avrà dopo il commit
-        self.planned_departing = False  # Deve iniziare l’abbandono del presidio?
-        self.planned_support_relocation = False # Deve raggiungere la posizione interna da support?
+        # These are the values that decide_station will set
+        self.planned_station_role = None # Role that the drone will have after the commit
+        self.planned_departing = False  # Must it start leaving the station?
+        self.planned_support_relocation = False # Must it reach the inner support position?
 
-        # Sono già in uscita? -> non decido ruoli
+        # Already departing? -> do not decide roles
         if self.departing_from is not None:
             return
 
-        # Sto raggiungendo la posizione support?
-        # -> se sono arrivato, divento support
-        # -> altrimenti continuo la rilocazione
+        # Moving toward the support position?
+        # -> if arrived, become a support
+        # -> otherwise, continue relocation
         if self.support_destination is not None:
-            distanza_destinazione = np.linalg.norm(self.position - self.support_destination)
-            if distanza_destinazione <= EPS:
+            destination_distance = np.linalg.norm(self.position - self.support_destination)
+            if destination_distance <= EPS:
                 self.planned_station_role = "support"
             return
 
-        # Sono owner?
-        # -> risolvo eventuali conflitti
-        # -> se vinco rimango owner
-        # -> se perdo mi riloco come support
+        # Am I the owner?
+        # -> resolve any conflicts
+        # -> if I win, remain owner
+        # -> if I lose, relocate as support
         if self.station_role == "owner":
             if self._target_is_still_perceived(self.target):
-                owner_eletto = self._find_owner_for_point(self.target)
+                elected_owner = self._find_owner_for_point(self.target)
 
-                if owner_eletto is self: # VITTORIA
-                    # L'owner non abbandona mai per sovraffollamento.
+                if elected_owner is self: # VICTORY
+                    # The owner never leaves due to overcrowding.
                     self.planned_station_role = "owner"
-                elif owner_eletto is not None: # SCONFITTA
-                    # Un owner perdente lascia il centro e raggiunge la posizione radiale interna prima di diventare SUPPORT.
+                elif elected_owner is not None: # DEFEAT
+                    # A losing owner leaves the center and reaches the inner radial position before becoming SUPPORT.
                     self.planned_support_relocation = True
 
-                self._reset_release_wait() # Un owner non deve conservare alcun timer di abbandono.
+                self._reset_release_wait() # An owner must not retain any departure timer.
             return
 
-        # Sono support?
-        # -> se esiste l’owner, controllo il suo deficit:
-        #   -> deficit non negativo: rimango
-        #   -> deficit negativo: attesa e possibile partenza
-        # -> se l’owner non esiste, ricado nell’elezione
+        # Am I a support?
+        # -> if the owner exists, check its deficit:
+        #   -> nonnegative deficit: remain
+        #   -> negative deficit: wait and possibly depart
+        # -> if the owner does not exist, fall back to the election
         if self.station_role == "support":
             owner = self._find_owner_for_point(self.target)
 
@@ -994,74 +994,74 @@ class QuadcopterDrone(BaseDrone):
                 self.planned_station_role = "support"
 
                 if self._support_should_depart(owner):
-                    self.planned_station_role = None # annulla il ruolo support pianificato
-                    self.planned_departing = True # pianifica l’inizio dell’uscita
+                    self.planned_station_role = None # cancel the planned support role
+                    self.planned_departing = True # plan the start of departure
 
                 return
-            # Owner non trovato: non facciamo return.
-            # Il vecchio support prosegue nella normale elezione.
+            # Owner not found: do not return.
+            # The former support continues with the normal election.
 
-        punto = self.planned_target
-        # Da questo momento la funzione gestisce: droni liberi diretti verso un punto, vecchi support rimasti senza owner.
-        # Usa planned_target, non target, perché deve lavorare con la decisione appena presa da decide_target().
+        point = self.planned_target
+        # From this point, the function handles free drones heading toward a point and former supports left without an owner.
+        # It uses planned_target, not target, because it must work with the decision just made by decide_target().
 
-        # Ho un planned_target?
-        # -> no: nessuna elezione
-        # -> sì: controllo se sono dentro la coverage
-        if punto is None:
+        # Do I have a planned_target?
+        # -> no: no election
+        # -> yes: check whether I am within coverage
+        if point is None:
             return
 
-        mia_distanza = np.linalg.norm(self.position - punto.position)
+        my_distance = np.linalg.norm(self.position - point.position)
 
-        # Il drone può partecipare alla politica di presidio solamente quando è fisicamente dentro la coverage.
-        if mia_distanza > self.coverage_radius:
+        # The drone can participate in the stationing policy only when physically within coverage.
+        if my_distance > self.coverage_radius:
             return 
         
-        # Dentro la coverage esiste già un owner?
-        # -> sì: mi riloco come support
-        # -> no: confronto tutti i candidati
-        owner_esistente = self._find_owner_for_point(punto)
+        # Does an owner already exist within coverage?
+        # -> yes: relocate as support
+        # -> no: compare all candidates
+        existing_owner = self._find_owner_for_point(point)
 
-        if owner_esistente is not None:
+        if existing_owner is not None:
             self.planned_support_relocation = True
             return
 
-        # Nessun owner: i candidati continuano verso il centro. 
-        # L'elezione viene resa effettiva soltanto quando il candidato migliore ha raggiunto esattamente il punto;
-        # cosi' l'owner non viene congelato sul bordo.
-        candidati = [self]
+        # No owner: candidates continue toward the center. 
+        # The election becomes effective only when the best candidate has reached the point exactly;
+        # this prevents the owner from being frozen at the boundary.
+        candidates = [self]
 
-        for vicino in self.neighbors:
-            if not isinstance(vicino, QuadcopterDrone):
+        for neighbor in self.neighbors:
+            if not isinstance(neighbor, QuadcopterDrone):
                 continue
 
-            if vicino.departing_from is not None: 
+            if neighbor.departing_from is not None: 
                 continue
 
-            if vicino.planned_target is None:
+            if neighbor.planned_target is None:
                 continue
 
-            if not self._same_point(vicino.planned_target, punto):
+            if not self._same_point(neighbor.planned_target, point):
                 continue
 
-            distanza_vicino = np.linalg.norm(vicino.position - punto.position)
+            neighbor_distance = np.linalg.norm(neighbor.position - point.position)
 
-            if distanza_vicino <= self.coverage_radius:
-                candidati.append(vicino)
+            if neighbor_distance <= self.coverage_radius:
+                candidates.append(neighbor)
 
-        vincitore = min(candidati, key=lambda drone: (np.linalg.norm(drone.position - punto.position), drone.unique_id))
+        winner = min(candidates, key=lambda drone: (np.linalg.norm(drone.position - point.position), drone.unique_id))
 
-        distanza_vincitore = np.linalg.norm(vincitore.position - punto.position)
+        winner_distance = np.linalg.norm(winner.position - point.position)
 
-        # Il miglior candidato è al centro?
-        # -> no: continuiamo ad avvicinarci
-        # -> sì:
-        #   -> vincitore: owner
-        #   -> altri: rilocazione support
-        if distanza_vincitore > EPS:
+        # Is the best candidate at the center?
+        # -> no: continue approaching
+        # -> yes:
+        #   -> winner: owner
+        #   -> others: support relocation
+        if winner_distance > EPS:
             return
 
-        if vincitore is self:
+        if winner is self:
             self.planned_station_role = "owner"
         else:
             self.planned_support_relocation = True
@@ -1073,20 +1073,20 @@ class QuadcopterDrone(BaseDrone):
     def commit_decision(self):
 
         """
-        commit_decision() trasforma le decisioni planned_* nello stato corrente del quadricottero.
-        Non decide e non muove il drone, applica ciò che è stato stabilito da:
+        commit_decision() transforms planned_* decisions into the quadcopter's current state.
+        It neither decides nor moves the drone; it applies what was established by:
         decide_target()
         decide_station()
-        La funzione gestisce tre casi principali, in quest'ordine:
-            1. inizio dell'uscita
-            2. inizio della rilocazione da support
-            3. commit normale
+        The function handles three main cases, in this order:
+            1. start of departure
+            2. start of support relocation
+            3. normal commit
         """
-        # Un support ha terminato l'attesa (_support_should_depart() ha concluso l’attesa) e deve uscire.
+        # A support has finished waiting (_support_should_depart() completed the wait) and must leave.
         if (self.planned_departing and self.departing_from is None):
-            self.departing_from = self.target # memorizzazione del punto da abbandonare
+            self.departing_from = self.target # store the point to leave
 
-            # cancellazione dello stato di presidio
+            # Clear the stationing state
             self.support_destination = None
             self.station_role = None 
             self.planned_station_role = None
@@ -1096,25 +1096,25 @@ class QuadcopterDrone(BaseDrone):
             self.guidance_position = None
             self.avoid_position = None
 
-            # il drone sta uscendo dalla zona, non è ancora considerato in stato di esplorazione
+            # The drone is leaving the zone and is not yet considered to be exploring
             self.exploring = False
 
             self._reset_release_wait()
             return
 
-        # il drone era già in uscita
+        # The drone was already departing
         if self.departing_from is not None:
             return
 
-        # Questo può accadere quando:
-        #   -un drone entra nella coverage e trova già un owner;
-        #   -un candidato perde l’elezione;
-        #   -un owner perde un conflitto tra più owner.
-        # Il drone non diventa subito support. Prima deve raggiungere la posizione radiale interna.
+        # This can happen when:
+        #   -a drone enters coverage and finds an existing owner;
+        #   -a candidate loses the election;
+        #   -an owner loses a conflict among multiple owners.
+        # The drone does not immediately become a support. It must first reach the inner radial position.
         if self.planned_support_relocation:
 
             if self.planned_target is None:
-                raise RuntimeError("Rilocazione SUPPORT pianificata senza planned_target.")
+                raise RuntimeError("SUPPORT relocation planned without planned_target.")
             
             super().commit_decision()
 
@@ -1124,24 +1124,24 @@ class QuadcopterDrone(BaseDrone):
             self.avoid_position = None
             self.exploring = False
 
-            # memorizzazione della direzione di ingresso
+            # Store the entry direction
             if self.entry_direction is None:
                 self._remember_entry_direction(self.target)
-                raggio_support = max(0.0, self.coverage_radius - self.support_inset)
-                destinazione = (self.target.position + (self.entry_direction * raggio_support))
-                self.support_destination = self._clip_position(destinazione)
+                support_radius = max(0.0, self.coverage_radius - self.support_inset)
+                destination = (self.target.position + (self.entry_direction * support_radius))
+                self.support_destination = self._clip_position(destination)
 
             self._reset_release_wait()
             return
 
 
-        # Se il drone:
-        #   -non sta iniziando un’uscita;
-        #   -non è già in uscita;
-        #   -non sta iniziando una rilocazione;
-        #   -si arriva al commit normale.
-        ruolo_precedente = self.station_role
-        target_precedente = self.target
+        # If the drone:
+        #   -is not starting a departure;
+        #   -is not already departing;
+        #   -is not starting a relocation;
+        #   -proceed with the normal commit.
+        previous_role = self.station_role
+        previous_target = self.target
 
         super().commit_decision()
 
@@ -1151,120 +1151,120 @@ class QuadcopterDrone(BaseDrone):
 
         self.station_role = self.planned_station_role
 
-        # nuovo_presidio è vero quando il drone, dopo il commit, è owner/support e:
-        # prima non era stazionario oppure prima presidiava un altro punto.
-        nuovo_presidio = (
+        # new_station is true when, after the commit, the drone is owner/support and:
+        # it was not stationary before, or it previously staffed a different point.
+        new_station = (
             self.station_role in ("owner", "support")
-            and (ruolo_precedente not in ("owner", "support") or not self._same_point(target_precedente,self.target))
+            and (previous_role not in ("owner", "support") or not self._same_point(previous_target,self.target))
         )
 
-        if nuovo_presidio:
-            # La direzione radiale viene memorizzata per qualunque nuovo ruolo:
-            # anche un owner puo' diventare support dopo un conflitto tra owner.
+        if new_station:
+            # The radial direction is stored for any new role:
+            # an owner can also become a support after an owner conflict.
             self._remember_entry_direction(self.target)
 
-        # Se il drone prima era owner/support e ora non lo è più, la vecchia direzione d’ingresso viene cancellata.
+        # If the drone was previously owner/support and no longer is, clear the old entry direction.
         if self.station_role is None:
-            if ruolo_precedente in ("owner", "support"):
+            if previous_role in ("owner", "support"):
                 self.entry_direction = None
 
-        # pulizi dello stato di movimento per i droni stazionari
+        # Clear movement state for stationary drones
         if self.station_role is not None:
             self.support_destination = None
             self.guidance_position = None
             self.avoid_position = None
 
     # ------------------------------------------------------------------
-    # Memoria del lato di ingresso
+    # Entry-side memory
     # ------------------------------------------------------------------
 
-    def _remember_entry_direction(self, punto):
-        delta = self.position - punto.position
-        norma = np.linalg.norm(delta)
+    def _remember_entry_direction(self, point):
+        delta = self.position - point.position
+        magnitude = np.linalg.norm(delta)
 
-        if norma > EPS:
-            self.entry_direction = delta / norma
+        if magnitude > EPS:
+            self.entry_direction = delta / magnitude
         else:
             self.entry_direction = self._normalize(-self.direction, fallback=np.array([1.0, 0.0]))
 
     # ------------------------------------------------------------------
-    # Stazionamento
+    # Stationing
     # ------------------------------------------------------------------
 
     def _hold_station(self):
-        """OWNER e SUPPORT restano esattamente nella posizione raggiunta."""
+        """OWNER and SUPPORT remain exactly at the reached position."""
         self.moving = False
 
     def _move_exactly_towards_position(self, destination):
         """
-            Muove verso una posizione geometrica.
-            In caso la distanza dal punto sia minore del passo ci si muove solo della distanza per evitare di sforare
+            Moves toward a geometric position.
+            If the distance to the point is shorter than the step, move only that distance to avoid overshooting
         """
-        # calcola vettore e distanza dalla destinazione
+        # Calculate vector and distance to the destination
         delta = destination - self.position
-        distanza = np.linalg.norm(delta)
+        distance = np.linalg.norm(delta)
 
-        # se si è già arrivati ci si ferma
-        if distanza <= EPS:
+        # Stop if the destination has already been reached
+        if distance <= EPS:
             self.moving = False
             return True
 
-        # Altrimenti orienta il drone esattamente verso la destinazione
-        self.direction = delta / distanza
-        # Il passo viene limitato alla distanza rimanente
-        passo = min(self.speed, distanza)
+        # Otherwise, orient the drone exactly toward the destination
+        self.direction = delta / distance
+        # Limit the step to the remaining distance
+        step_length = min(self.speed, distance)
 
-        self.position = self._clip_position(self.position + self.direction * passo)
+        self.position = self._clip_position(self.position + self.direction * step_length)
         self._update_angle()
-        self.moving = passo > EPS
-        return distanza <= self.speed + EPS
+        self.moving = step_length > EPS
+        return distance <= self.speed + EPS
 
     def _finish_center_approach(self):
         """
-        Aggancia esattamente il centro quando il candidato e' a un passo.
-        - se restituisce False, non ha effettuato alcun movimento;
-        - se effettua il movimento, restituisce sempre True.
+        Snaps exactly to the center when the candidate is one step away.
+        - if it returns False, no movement was performed;
+        - if it performs the movement, it always returns True.
         """
         if self.target is None:
             return False
 
         delta = self.target.position - self.position
-        distanza = np.linalg.norm(delta)
+        distance = np.linalg.norm(delta)
 
-        if distanza > self.speed + EPS:
+        if distance > self.speed + EPS:
             return False
 
         return self._move_exactly_towards_position(self.target.position) 
 
     # ------------------------------------------------------------------
-    # Uscita dalla coverage
+    # Departure from coverage
     # ------------------------------------------------------------------
 
     def _move_departure(self):
-        # recupera il punto che si sta abbandonando
-        punto = self.departing_from
+        # Retrieve the point being left
+        point = self.departing_from
 
-        if punto is None:
+        if point is None:
             return
 
-        # in caso entry_direction mancasse, si ricalcola
+        # Recalculate entry_direction if it is missing
         if self.entry_direction is None:
-            self._remember_entry_direction(punto)
+            self._remember_entry_direction(point)
 
-        # Il drone assume esattamente la direzione radiale d’ingresso
+        # The drone adopts exactly the radial entry direction
         self.direction = self._normalize(self.entry_direction,fallback=self.direction)
 
-        # Si sposta di un passo lungo quella direzione.
+        # Move one step along that direction.
         self.position = self._clip_position(self.position + self.direction * self.speed)
 
-        # per la rappresentazione grafica nell'app
+        # For graphical representation in the app
         self._update_angle()
         self.moving = True
 
-        distanza = np.linalg.norm(self.position - punto.position)
+        distance = np.linalg.norm(self.position - point.position)
 
-        # si controlla se si è usciti dalla zona di presidio
-        if distanza > self.coverage_radius:
+        # Check whether the drone has left the stationing zone
+        if distance > self.coverage_radius:
             self.departing_from = None
             self.entry_direction = None
 
@@ -1276,30 +1276,30 @@ class QuadcopterDrone(BaseDrone):
             self._reset_release_wait()
 
     # ------------------------------------------------------------------
-    # Guida e deviazione
+    # Guidance and deviation
     # ------------------------------------------------------------------
 
-    def _attraction_to_position(self, posizione):
-        delta = posizione - self.position
-        distanza = np.linalg.norm(delta)
+    def _attraction_to_position(self, position):
+        delta = position - self.position
+        distance = np.linalg.norm(delta)
 
-        if distanza <= EPS:
+        if distance <= EPS:
             return np.zeros(2)
 
-        return (delta / distanza) * self.cohere_factor
+        return (delta / distance) * self.cohere_factor
 
-    def _avoidance_direction(self, posizione):
-        """Ruota leggermente la rotta lontano da un presidio pieno."""
-        delta = posizione - self.position
-        distanza = np.linalg.norm(delta)
+    def _avoidance_direction(self, position):
+        """Slightly rotates the route away from a full station."""
+        delta = position - self.position
+        distance = np.linalg.norm(delta)
 
-        if distanza <= EPS:
+        if distance <= EPS:
             return self.direction.copy()
 
-        verso_presidio = delta / distanza
+        toward_station = delta / distance
 
-        # Se stiamo gia' andando dalla parte opposta, non serve deviare ulteriormente.
-        if np.dot(self.direction, verso_presidio) <= 0:
+        # If already moving in the opposite direction, no further deviation is needed.
+        if np.dot(self.direction, toward_station) <= 0:
             return self.direction.copy()
 
         cos = np.cos(self.avoid_angle)
@@ -1307,79 +1307,79 @@ class QuadcopterDrone(BaseDrone):
 
         dx, dy = self.direction
 
-        sinistra = np.array([(cos * dx) - (sin * dy), (sin * dx) + (cos * dy)])
-        destra = np.array([(cos * dx) + (sin * dy), (-sin * dx) + (cos * dy)])
+        left = np.array([(cos * dx) - (sin * dy), (sin * dx) + (cos * dy)])
+        right = np.array([(cos * dx) + (sin * dy), (-sin * dx) + (cos * dy)])
 
-        # Scegliamo la rotazione meno diretta verso il presidio soddisfatto.
-        if (np.dot(sinistra, verso_presidio) < np.dot(destra, verso_presidio)):
-            return sinistra
+        # Choose the rotation that points less directly toward the satisfied station.
+        if (np.dot(left, toward_station) < np.dot(right, toward_station)):
+            return left
 
-        return destra
+        return right
 
     # ------------------------------------------------------------------
-    # Movimento
+    # Movement
     # ------------------------------------------------------------------
 
     def move(self):
 
         """
-        move() esegue lo stato corrente prodotto da commit_decision(),
-        per questo utilizza target, guidance_position, station_role, departing_from e support_destination, 
-        non i rispettivi campi planned_*.
-        La priorità dei rami è:
-            1. Uscita dal presidio
-            2. Rilocazione come support
-            3. Owner/support già stazionario
-            4. Aggancio finale al centro
-            5. Volo normale
+        move() executes the current state produced by commit_decision(),
+        so it uses target, guidance_position, station_role, departing_from, and support_destination, 
+        not their respective planned_* fields.
+        Branch priority is:
+            1. Departure from the station
+            2. Support relocation
+            3. Owner/support already stationary
+            4. Final snap to the center
+            5. Normal flight
         """
-        # Stato transitorio di uscita.
+        # Transitional departure state.
         if self.departing_from is not None:
             self._move_departure()
             return
 
-        # Questo stato si verifica quando il drone:
-        # è entrato nella coverage;
-        # ha trovato un owner esistente, oppure ha perso l’elezione;
-        # deve raggiungere la propria posizione interna da support.
-        # Finché non arriva, non è ancora support: è un drone in rilocazione.
+        # This state occurs when the drone:
+        # has entered coverage;
+        # has found an existing owner, or has lost the election;
+        # must reach its inner support position.
+        # Until it arrives, it is not yet a support: it is a relocating drone.
         if self.support_destination is not None:
             self._move_exactly_towards_position(self.support_destination)
             return
 
-        # Un drone che presidia e' immobile: 
-        # niente separazione, rientro verso il centro o altro movimento interno alla coverage.
+        # A stationing drone is stationary: 
+        # no separation, return toward the center, or other movement within coverage.
         if self.station_role in ("owner", "support"):
             self._hold_station()
             return
 
-        # Un punto ancora senza owner richiede che il candidato raggiunga il centro prima dell'elezione. 
-        # Lo snap finale evita overshoot/oscillazioni dovute al passo di lunghezza costante.
-        # False: non è stato eseguito l’aggancio; continua con il volo normale;
-        # True: il drone è stato portato al centro; termina move().
+        # A point without an owner requires the candidate to reach the center before the election. 
+        # The final snap prevents overshoot/oscillations caused by the constant-length step.
+        # False: the snap was not performed; continue with normal flight;
+        # True: the drone was moved to the center; end move().
         if self.target is not None and self._finish_center_approach():
             return
 
-        # Volo normale.
+        # Normal flight.
         neighbor_force = (self._separation_force() + self._alignment_force())
 
         boundary_force = self._boundary_force()
 
         if self.target is not None:
-            desiderata = (self._target_attraction() + neighbor_force + boundary_force)
+            desired_direction = (self._target_attraction() + neighbor_force + boundary_force)
 
         elif self.guidance_position is not None:
-            desiderata = (self._attraction_to_position(self.guidance_position) + neighbor_force + boundary_force)
+            desired_direction = (self._attraction_to_position(self.guidance_position) + neighbor_force + boundary_force)
 
         else:
             if self.avoid_position is not None:
-                direzione_base = (self._avoidance_direction(self.avoid_position))
+                base_direction = (self._avoidance_direction(self.avoid_position))
             else:
-                direzione_base = (self._rotated_exploration_direction())
+                base_direction = (self._rotated_exploration_direction())
 
-            desiderata = (direzione_base + neighbor_force + boundary_force)
+            desired_direction = (base_direction + neighbor_force + boundary_force)
 
-        self.direction = self._normalize(desiderata, fallback=self.direction)
+        self.direction = self._normalize(desired_direction, fallback=self.direction)
 
         self._update_angle()
 

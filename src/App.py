@@ -9,326 +9,326 @@ from mesa.visualization.components import AgentPortrayalStyle
 
 from Model import CoverageModel
 
-# --- RICONOSCIMENTO DEGLI AGENTI ---
-# NIENTE isinstance. Solara ricarica i moduli mentre l'app gira:
-# dopo un reload, Agents.TargetAgent e' un oggetto-classe NUOVO, 
-# mentre queste funzioni hanno catturato quello VECCHIO. isinstance() confronta l'identita' della classe,
-# quindi comincia a restituire False su agenti perfettamente validi - senza sollevare niente. 
-# Il sintomo e' che pezzi del disegno spariscono dopo qualche ricarica e non tornano piu'.
-# Il controllo sugli attributi invece regge, perche' guarda cosa l'oggetto SA FARE e non da quale oggetto-classe discende.
-def e_un_punto(agente):
-    """Vero per un TargetAgent: solo i punti hanno una quota."""
-    return hasattr(agente, "priority")
+# --- AGENT RECOGNITION ---
+# NO isinstance. Solara reloads modules while the app is running:
+# after a reload, Agents.TargetAgent is a NEW class object, 
+# while these functions captured the OLD one. isinstance() compares class identity,
+# so it starts returning False for perfectly valid agents - without raising anything. 
+# The symptom is that parts of the drawing disappear after a few reloads and never return.
+# Attribute checks remain reliable instead, because they examine what the object CAN DO rather than which class object it inherits from.
+def is_point(agent):
+    """True for a TargetAgent: only points have a quota."""
+    return hasattr(agent, "priority")
 
-def e_un_drone(agente):
-    """Vero per un Drone: solo i droni sanno di stare esplorando."""
-    return hasattr(agente, "exploring")
+def is_drone(agent):
+    """True for a Drone: only drones know whether they are exploring."""
+    return hasattr(agent, "exploring")
 
-# --- COLORI ---
-# In alto e non sparsi nel codice: sono l'unica cosa che si cambia davvero spesso, e averli qui evita di andarli a cercare dentro gli if.
-# I quattro stati di un punto sono una SCALA ORDINATA, e i colori la seguono:
-# rosso -> arancione -> verde -> ciano = nessuno, pochi, giusti, troppi.
-COLORE_SCOPERTO = "tab:red" # punto con ZERO droni: nessuno lo sta guardando
-COLORE_PARZIALE = "tab:orange" # ha qualcuno ma non abbastanza
-COLORE_SERVITO = "tab:green" # punto esattamente alla sua quota
-COLORE_ECCESSO = "tab:cyan" # punto con piu' droni di quanti ne chieda
-COLORE_STAZIONE = "tab:blue" # drone che sta presidiando
-COLORE_VIAGGIO = "tab:purple" # drone con un target ma non ancora arrivato
-COLORE_ESPLORA = "tab:gray" # drone che non vede nessun punto da servire
+# --- COLORS ---
+# Kept at the top instead of scattered through the code: these are the only values changed frequently, and placing them here avoids searching inside conditionals.
+# A point's four states form an ORDERED SCALE, and the colors follow it:
+# red -> orange -> green -> cyan = none, too few, enough, too many.
+UNCOVERED_COLOR = "tab:red" # point with ZERO drones: nobody is watching it
+PARTIAL_COLOR = "tab:orange" # it has some drones, but not enough
+SERVED_COLOR = "tab:green" # point exactly at its quota
+OVERSERVED_COLOR = "tab:cyan" # point with more drones than requested
+STATION_COLOR = "tab:blue" # drone currently stationing
+TRAVEL_COLOR = "tab:purple" # drone with a target but not there yet
+EXPLORING_COLOR = "tab:gray" # drone that sees no point to serve
 
 def agent_portrayal(agent):
-    """Dice a Mesa come disegnare un agente. Viene chiamata per ognuno, a ogni frame.
+    """Tells Mesa how to draw an agent. Called for every agent, on every frame.
 
-    Deve restituire un AgentPortrayalStyle. In Mesa 3.5.1 restituire un dizionario
-    funziona ancora ma e' DEPRECATO (emette un warning e sparira' in Mesa 4): quasi
-    tutti i tutorial in circolazione usano ancora la forma vecchia.
+    It must return an AgentPortrayalStyle. In Mesa 3.5.1, returning a dictionary
+    still works but is DEPRECATED (it emits a warning and will disappear in Mesa 4):
+    almost all tutorials currently available still use the old form.
     """
-    if e_un_punto(agent):
-        # --- PUNTI DI INTERESSE ---
-        # DUE CANALI VISIVI INDIPENDENTI, ed e' una scelta, non un dettaglio:
-        #   dimensione = priorita' -> la DOMANDA, che non cambia
-        #   colore     = deficit   -> lo STATO, che cambia a ogni passo
-        # Mescolandoli in un canale solo non si distinguerebbero un punto di quota 3 soddisfatto da uno di quota 1 soddisfatto.
+    if is_point(agent):
+        # --- POINTS OF INTEREST ---
+        # TWO INDEPENDENT VISUAL CHANNELS, which is a deliberate choice, not a detail:
+        #   size  = priority -> DEMAND, which does not change
+        #   color = deficit  -> STATE, which changes at every step
+        # Combining them into a single channel would make it impossible to distinguish a satisfied quota-3 point from a satisfied quota-1 point.
         if agent.occupancy == 0:
-            colore = COLORE_SCOPERTO
+            color = UNCOVERED_COLOR
         elif agent.occupancy < agent.priority:
-            colore = COLORE_PARZIALE
+            color = PARTIAL_COLOR
         elif agent.occupancy == agent.priority:
-            colore = COLORE_SERVITO
+            color = SERVED_COLOR
         else:
-            colore = COLORE_ECCESSO
+            color = OVERSERVED_COLOR
 
         return AgentPortrayalStyle(
-            color=colore,
-            marker="s", # quadrato: i punti sono luoghi, non veicoli
+            color=color,
+            marker="s", # square: points are locations, not vehicles
             size=90 + 70 * agent.priority, # quota 1 -> 160, quota 3 -> 300
-            zorder=1, # sotto ai droni: i droni non devono sparirci sopra
+            zorder=1, # below drones: drones must not disappear behind them
             edgecolors="black",
             linewidths=0.5,
         )
 
-    # --- DRONI ---
-    # Per il quadricottero "in stazione" e' un ruolo operativo, non la semplice coincidenza geometrica n_covered > 0. 
-    # Un explorer che attraversa una coverage o un support in uscita non deve apparire falsamente stazionario.
+    # --- DRONES ---
+    # For a quadcopter, "in station" is an operational role, not merely the geometric coincidence n_covered > 0. 
+    # An explorer crossing a coverage zone or a departing support must not falsely appear stationary.
     if hasattr(agent, "station_role"):
         if agent.station_role in ("owner", "support"):
-            colore = COLORE_STAZIONE
+            color = STATION_COLOR
         elif agent.exploring:
-            colore = COLORE_ESPLORA
+            color = EXPLORING_COLOR
         else:
-            colore = COLORE_VIAGGIO
+            color = TRAVEL_COLOR
     else:
-        # Per l'ala fissa non esistono ruoli discreti di hovering: resta valida la classificazione geometrica originale.
+        # Fixed-wing drones have no discrete hovering roles: the original geometric classification remains valid.
         if agent.n_covered > 0:
-            colore = COLORE_STAZIONE
+            color = STATION_COLOR
         elif agent.exploring:
-            colore = COLORE_ESPLORA
+            color = EXPLORING_COLOR
         else:
-            colore = COLORE_VIAGGIO
+            color = TRAVEL_COLOR
 
-    # L'owner del quadricottero usa una stella: il COLORE continua a descrivere lo stato operativo
-    marker_drone = "*" if getattr(agent, "owner", False) else "o"
-    dimensione_drone = 60 if getattr(agent, "owner", False) else 28
+    # A quadcopter owner uses a star: COLOR continues to describe the operational state
+    drone_marker = "*" if getattr(agent, "owner", False) else "o"
+    drone_size = 60 if getattr(agent, "owner", False) else 28
 
     return AgentPortrayalStyle(
-        color=colore,
-        marker=marker_drone,
-        size=dimensione_drone,
+        color=color,
+        marker=drone_marker,
+        size=drone_size,
         zorder=2,
         edgecolors="black",
         linewidths=0.3,
     )
 
-# --- LEGENDA ---
-# Voci costruite a mano con Line2D "vuote": servono solo come campioni di colore, non disegnano dati. 
-def _voce_legenda(colore, forma, etichetta):
+# --- LEGEND ---
+# Entries built manually with "empty" Line2D objects: they serve only as color samples and do not draw data. 
+def _legend_entry(color, shape, label):
     return Line2D(
-        [], [], color=colore, marker=forma, linestyle="none",
-        markersize=8, markeredgecolor="black", markeredgewidth=0.3, label=etichetta,
+        [], [], color=color, marker=shape, linestyle="none",
+        markersize=8, markeredgecolor="black", markeredgewidth=0.3, label=label,
     )
 
-VOCI_LEGENDA = [
-    _voce_legenda(COLORE_SCOPERTO, "s", "scoperto"),
-    _voce_legenda(COLORE_PARZIALE, "s", "parziale"),
-    _voce_legenda(COLORE_SERVITO, "s", "servito"),
-    _voce_legenda(COLORE_ECCESSO, "s", "sovra-servito"),
-    _voce_legenda(COLORE_STAZIONE, "o", "in stazione"),
-    _voce_legenda(COLORE_VIAGGIO, "o", "in viaggio"),
-    _voce_legenda(COLORE_ESPLORA, "o", "esplora"),
-    _voce_legenda(COLORE_STAZIONE, "*", "owner quad"),
-    # Il cerchio tratteggiato. 
-    # La dicitura dice DI CHI E' il raggio, che e' la lettura sbagliata da prevenire: il cerchio sta attorno al punto ma il raggio
-    # e' del drone, ed e' il luogo delle posizioni da cui un drone lo presidia.
-    Line2D([], [], color="black", linestyle="--", linewidth=0.7, alpha=0.6, label="presidio (raggio del drone)")]
+LEGEND_ENTRIES = [
+    _legend_entry(UNCOVERED_COLOR, "s", "uncovered"),
+    _legend_entry(PARTIAL_COLOR, "s", "partially served"),
+    _legend_entry(SERVED_COLOR, "s", "served"),
+    _legend_entry(OVERSERVED_COLOR, "s", "over-served"),
+    _legend_entry(STATION_COLOR, "o", "stationary"),
+    _legend_entry(TRAVEL_COLOR, "o", "traveling"),
+    _legend_entry(EXPLORING_COLOR, "o", "exploring"),
+    _legend_entry(STATION_COLOR, "*", "owner quad"),
+    # The dashed circle. 
+    # The label states WHOSE radius it is, preventing the likely misreading: the circle surrounds the point, but the radius
+    # belongs to the drone and defines the set of positions from which a drone stations at that point.
+    Line2D([], [], color="black", linestyle="--", linewidth=0.7, alpha=0.6, label="stationing zone (drone radius)")]
 
-def compatta(ax, larghezza, altezza):
-    """Rimpicciolisce la figura che contiene questi assi.
+def resize_figure(ax, width, height):
+    """Shrinks the figure containing these axes.
 
-    Serve perche' SolaraViz dispone i componenti in una griglia con celle di
-    altezza fissa (6 colonne x 10 righe), mentre matplotlib crea le figure alla
-    dimensione di default: eccedono la cella e si sovrappongono al componente
-    accanto. Ne' make_plot_component ne' SpaceRenderer accettano una figsize, ma
-    entrambi chiamano un post_process con gli Axes - e dagli Axes si risale alla
-    figura. E' l'unico punto di aggancio disponibile.
+    SolaraViz arranges components in a grid with fixed-height cells (6 columns x
+    10 rows), while matplotlib creates figures at the default size: they exceed
+    the cell and overlap the adjacent component. Neither make_plot_component nor
+    SpaceRenderer accepts a figsize, but both call a post_process with the Axes -
+    and the figure can be retrieved from the Axes. This is the only available
+    hook.
     """
-    ax.get_figure().set_size_inches(larghezza, altezza)
+    ax.get_figure().set_size_inches(width, height)
 
-def compatta_grafico(ax):
-    """post_process dei tre grafici: solo la dimensione."""
-    compatta(ax, 4.6, 2.9)
+def resize_plot(ax):
+    """post_process for the three plots: size only."""
+    resize_figure(ax, 4.6, 2.9)
 
-def configura_assi(ax):
-    """ post_process del renderer: solo configurazione degli assi, nessun disegno.
+def configure_axes(ax):
+    """ Renderer post_process: axes configuration only, no drawing.
 
-    Perche' solo configurazione: SolaraViz applica post_process una volta sola
-    (tiene un flag _post_process_applied che non riazzera mai) e intanto ripulisce
-    patches/collections/lines/artists a OGNI frame. Un cerchio disegnato qui
-    comparirebbe al primo frame e sparirebbe al secondo.
-    Legenda, titolo e proprieta' degli assi invece sopravvivono, perche' non stanno
-    in quelle liste: la legenda vive in ax.legend_.
+    Why configuration only: SolaraViz applies post_process just once (it keeps a
+    _post_process_applied flag that it never resets), while clearing patches/
+    collections/lines/artists on EVERY frame. A circle drawn here would appear on
+    the first frame and disappear on the second. The legend, title, and axes
+    properties instead survive because they are not in those lists: the legend
+    lives in ax.legend_.
     """
-    # aspect equal: senza, con width != height matplotlib stira gli assi,
-    # i cerchi di copertura diventano ellissi e le distanze sullo schermo non corrispondono piu' a quelle del modello.
-    compatta(ax, 5.0, 5.4)
+    # equal aspect: without it, when width != height matplotlib stretches the axes,
+    # coverage circles become ellipses and on-screen distances no longer match model distances.
+    resize_figure(ax, 5.0, 5.4)
     ax.set_aspect("equal")
-    # Legenda SOTTO e non a destra: con bbox_inches="tight" una legenda laterale allarga la figura,
-    # che sfonda la sua cella nella griglia di SolaraViz e va a sovrapporsi al componente accanto.
-    # Sotto la figura cresce in altezza, dove c'e' spazio, e su tre colonne resta compatta. 
-    # Fuori dagli assi e non dentro per non coprire gli agenti.
-    ax.legend(handles=VOCI_LEGENDA, loc="upper center", bbox_to_anchor=(0.5, -0.05),ncol=3, frameon=False, fontsize=8)
+    # Legend BELOW rather than on the right: with bbox_inches="tight", a side legend widens the figure,
+    # causing it to overflow its SolaraViz grid cell and overlap the adjacent component.
+    # Below the figure it grows vertically, where there is space, and stays compact over three columns. 
+    # Outside the axes rather than inside, so it does not cover the agents.
+    ax.legend(handles=LEGEND_ENTRIES, loc="upper center", bbox_to_anchor=(0.5, -0.05),ncol=3, frameon=False, fontsize=8)
 
 class CustomSpaceRenderer(SpaceRenderer):
-    """Renderer personalizzato che garantisce il disegno dei cerchi e delle frecce
-    anche dopo il Reset o il cambio dei parametri da slider.
+    """Custom renderer that ensures circles and arrows are drawn even after a Reset
+    or a parameter change through a slider.
     """
     def draw_agents(self, *args, **kwargs):
-        # 1) Fa il disegno standard dei droni e dei punti
-        assi = super().draw_agents(*args, **kwargs)
+        # 1) Draws drones and points using the standard renderer
+        axes = super().draw_agents(*args, **kwargs)
        
 
-        # 2) Recupera gli agenti dallo spazio corrente
-        punti = [a for a in self.space.agents if e_un_punto(a)]
-        droni = [a for a in self.space.agents if e_un_drone(a)]
+        # 2) Retrieves agents from the current space
+        points = [a for a in self.space.agents if is_point(a)]
+        drones = [a for a in self.space.agents if is_drone(a)]
 
-        # 3) Zone di copertura: UNA EllipseCollection invece di N add_patch(Circle).
-        # Migliora le performance di rendering e il disegno è identico.
-        if punti:
-            xy = np.array([p.position for p in punti])
-            diametro = np.full(len(punti), 2.0 * punti[0].model.coverage_radius)
-            assi.add_collection(EllipseCollection(
-                widths=diametro, heights=diametro, angles=np.zeros(len(punti)),
-                units="xy", offsets=xy, offset_transform=assi.transData,
+        # 3) Coverage zones: ONE EllipseCollection instead of N add_patch(Circle) calls.
+        # Improves rendering performance while producing an identical drawing.
+        if points:
+            xy = np.array([p.position for p in points])
+            diameter = np.full(len(points), 2.0 * points[0].model.coverage_radius)
+            axes.add_collection(EllipseCollection(
+                widths=diameter, heights=diameter, angles=np.zeros(len(points)),
+                units="xy", offsets=xy, offset_transform=axes.transData,
                 facecolors="none", edgecolors="black", linestyles="--",
                 linewidths=0.7, alpha=0.45, zorder=0,
             ))
 
-        # 4) Priorita' numerica accanto a ogni punto.
-        # Usiamo scatter con marker matematico (es. "$3$") invece di ax.text:
-        # scatter crea una PathCollection,
-        # cioe' lo stesso tipo di oggetto grafico che il renderer Mesa/Matplotlib gestisce e ripulisce correttamente a ogni frame.
-        if punti:
+        # 4) Numerical priority next to each point.
+        # Use scatter with a mathematical marker (e.g., "$3$") instead of ax.text:
+        # scatter creates a PathCollection,
+        # the same type of graphical object that the Mesa/Matplotlib renderer manages and clears correctly on every frame.
+        if points:
             offset_x = max(1.2, 0.018 * self.space.width)
-            for punto in punti:
-                x_punto = float(punto.position[0])
-                y_punto = float(punto.position[1])
+            for point in points:
+                point_x = float(point.position[0])
+                point_y = float(point.position[1])
 
-                # Di norma metto il numero a destra del quadrato.
-                # Vicino al bordo destro lo sposto a sinistra per non tagliarlo.
-                if x_punto + offset_x < self.space.width:
-                    x_label = x_punto + offset_x
+                # Normally place the number to the right of the square.
+                # Near the right boundary, move it to the left to avoid clipping it.
+                if point_x + offset_x < self.space.width:
+                    x_label = point_x + offset_x
                 else:
-                    x_label = x_punto - offset_x
+                    x_label = point_x - offset_x
 
-                assi.scatter(
+                axes.scatter(
                     [x_label],
-                    [y_punto],
-                    marker=f"${int(punto.priority)}$",
+                    [point_y],
+                    marker=f"${int(point.priority)}$",
                     s=85,
                     c="black",
                     zorder=4,
                 )
 
-        # 5) Frecce di direzione solo per i droni che si stanno realmente muovendo.
-        # Un quadricottero in hovering conserva l'ultima direction come memoria cinematica,
-        # ma disegnarla come freccia suggerirebbe falsamente movimento.
-        droni_in_movimento = [d for d in droni if getattr(d, "moving", True)]
-        if droni_in_movimento:
-            x = np.array([d.position[0] for d in droni_in_movimento])
-            y = np.array([d.position[1] for d in droni_in_movimento])
-            ang = np.radians(np.array([d.angle for d in droni_in_movimento]))
-            assi.quiver(x, y, np.cos(ang), np.sin(ang),
+        # 5) Direction arrows only for drones that are actually moving.
+        # A hovering quadcopter retains its last direction as kinematic memory,
+        # but drawing it as an arrow would falsely suggest movement.
+        moving_drones = [d for d in drones if getattr(d, "moving", True)]
+        if moving_drones:
+            x = np.array([d.position[0] for d in moving_drones])
+            y = np.array([d.position[1] for d in moving_drones])
+            ang = np.radians(np.array([d.angle for d in moving_drones]))
+            axes.quiver(x, y, np.cos(ang), np.sin(ang),
                       scale=45, width=0.0035, alpha=0.55, zorder=3)
 
-        return assi
+        return axes
 
-# --- PARAMETRI REGOLABILI DALL'INTERFACCIA ---
-# I MINIMI NON SONO ARBITRARI. Spostare uno slider RICOSTRUISCE il modello da zero,
-# quindi una combinazione che viola un guardrail solleva ValueError e pianta l'interfaccia.
-# Con i parametri fissi (speed, coverage_radius):
+# --- PARAMETERS ADJUSTABLE THROUGH THE INTERFACE ---
+# THE MINIMUM VALUES ARE NOT ARBITRARY. Moving a slider REBUILDS the model from scratch,
+# so a combination that violates a guardrail raises ValueError and crashes the interface.
+# With the fixed parameters (speed, coverage_radius):
 #     cohere >= speed/coverage_radiu
 #     point_sensing_radius >= coverage_radius 
-#     ala fissa: 2*margin 
-#     quadricottero: 2*quadcopter_margin 
-# Per questo speed e coverage_radius NON sono esposti: renderli regolabili accoppierebbe i vincoli fra loro e nessuna scelta di estremi sarebbe piu' sicura.
+#     fixed wing: 2*margin 
+#     quadcopter: 2*quadcopter_margin 
+# For this reason, speed and coverage_radius are NOT exposed: making them adjustable would couple the constraints and no choice of limits would remain safe.
 model_params = {
-    "seed": Slider("seme casuale", value=42, min=0, max=200, step=1),
-    "n_droni": Slider("droni", value=20, min=5, max=90, step=5),
-    "n_punti": Slider("punti di interesse", value=12, min=2, max=30, step=1),
-    "priorita_massima": Slider("quota massima per punto", value=3, min=1, max=6, step=1),
-    "disposizione_punti": {
+    "seed": Slider("random seed", value=42, min=0, max=200, step=1),
+    "n_drones": Slider("drones", value=20, min=5, max=90, step=5),
+    "n_points": Slider("points of interest", value=12, min=2, max=30, step=1),
+    "max_priority": Slider("maximum quota per point", value=3, min=1, max=6, step=1),
+    "point_layout": {
         "type": "Select",
-        "value": "casuali",
-        "values": ["casuali", "gruppi", "sparsi", "cerchio", "bordi", "centrali"],
-        "label": "disposizione iniziale dei punti",
+        "value": "random",
+        "values": ["random", "clusters", "dispersed", "circle", "edges", "central"],
+        "label": "initial point layout",
     },
-    "tipo_drone": {
+    "drone_type": {
         "type": "Select",
-        "value": "quadricottero",
-        "values": ["quadricottero", "ala_fissa"],
-        "label": "tipo di drone",
+        "value": "quadcopter",
+        "values": ["quadcopter", "fixed_wing"],
+        "label": "drone type",
     },
-    "partenza": {
+    "deployment": {
         "type": "Select",
-        "value": "sparsi",
-        "values": ["sparsi", "base", "alto", "basso", "sinistra", "destra"],
-        "label": "schieramento iniziale",
+        "value": "dispersed",
+        "values": ["dispersed", "base", "top", "bottom", "left", "right"],
+        "label": "initial deployment",
     },
-    "beta": Slider("beta: costo del viaggio", value=0.05, min=0.0, max=0.30, step=0.01),
-    "cohere": Slider("attrazione al punto", value=0.25, min=0.15, max=0.60, step=0.05),
+    "beta": Slider("beta: travel cost", value=0.05, min=0.0, max=0.30, step=0.01),
+    "cohere": Slider("attraction to point", value=0.25, min=0.15, max=0.60, step=0.05),
     "point_sensing_radius": Slider(
-        "raggio di percezione dei punti",
+        "point sensing radius",
         value=10.0, min=8.0, max=25.0, step=0.5,
     ),
     "drone_sensing_radius": Slider(
-        "raggio di comunicazione dei droni",
+        "drone communication radius",
         value=10.0, min=8.0, max=25.0, step=0.5,
     ),
-    "match": Slider("allineamento fra droni", value=0.05, min=0.0, max=0.20, step=0.01),
-    "separation": Slider("distanziamento tra droni vicini", value=0.015, min=0.0, max=0.05, step=0.05),
-    "explore": Slider("intensita' dell'esplorazione", value=0.2, min=0.0, max=0.60, step=0.05),
+    "match": Slider("alignment between drones", value=0.05, min=0.0, max=0.20, step=0.01),
+    "separation": Slider("separation between nearby drones", value=0.015, min=0.0, max=0.05, step=0.05),
+    "explore": Slider("exploration intensity", value=0.2, min=0.0, max=0.60, step=0.05),
     "avoid_angle_degrees": Slider(
-        "deviazione da presidio soddisfatto",
+        "deviation from satisfied station",
         value=10.0, min=0.0, max=30.0, step=1.0,
     ),
     "support_inset": Slider(
-        "rientro support dal bordo",
+        "support inset from boundary",
         value=2.0, min=0.5, max=4.0, step=0.5,
     ),
     "release_delay_max_steps": Slider(
-        "variabilita' attesa sovraffollamento",
+        "overcrowding wait variability",
         value=5, min=0, max=20, step=1,
     ),
 }
 
-# --- GRAFICI ---
-# I nomi sono ESATTAMENTE le chiavi dei model_reporters del DataCollector: se non
-# combaciano il grafico resta vuoto senza dire perche'.
-# Primo grafico: il deficit, nella migliore delle ipotesi tenderà ad un asintono inferiore corrispondente al deficit incomprimibile. 
-grafico_deficit = make_plot_component({"deficit_residuo": "tab:red"}, post_process=compatta_grafico)
+# --- PLOTS ---
+# Names are EXACTLY the DataCollector model_reporters keys: if they do not
+# match, the plot remains empty without explaining why.
+# First plot: in the best case, the deficit will tend toward a lower asymptote corresponding to the unavoidable deficit. 
+deficit_plot = make_plot_component({"residual_deficit": "tab:red"}, post_process=resize_plot)
 
-# Secondo: i due tipi di drone inattivo. 
-# La DISTANZA fra le due curve e' la diagnostica: sono i droni che un punto l'hanno scelto ma non lo stanno presidiando.
-grafico_droni = make_plot_component({"droni_oziosi": "tab:gray", "droni_in_esplorazione": "tab:purple"}, post_process=compatta_grafico)
+# Second: the two types of inactive drone. 
+# The GAP between the two curves is diagnostic: it represents drones that selected a point but are not stationing there.
+drone_plot = make_plot_component({"idle_drones": "tab:gray", "exploring_drones": "tab:purple"}, post_process=resize_plot)
 
-# Terzo: i due modi di sbagliare, punti lasciati indietro e droni sprecati.
-grafico_punti = make_plot_component({"punti_soddisfatti": "tab:green", "sovra_servizio": "tab:orange"}, post_process=compatta_grafico)
+# Third: the two failure modes, points left behind and wasted drones.
+point_plot = make_plot_component({"satisfied_points": "tab:green", "overservice": "tab:orange"}, post_process=resize_plot)
 
-# --- COMPONENTE INTERFACCIA: SWITCH PER MOSTRARE/NASCONDERE I GRAFICI ---
-# Parte disattivato (False) di default per garantire le massime prestazioni
-mostra_grafici = solara.reactive(False)
+# --- INTERFACE COMPONENT: SWITCH TO SHOW/HIDE PLOTS ---
+# Starts disabled (False) by default to ensure maximum performance
+show_plots = solara.reactive(False)
 
 @solara.component
-def PannelloGrafici(model):
+def PlotPanel(model):
     with solara.Column():
-        solara.Switch(label="Mostra i grafici (rallenta l'app)", value=mostra_grafici)
-        if mostra_grafici.value:
-            # make_plot_component restituisce sempre (funzione, numero_di_pagina):
-            # il secondo elemento e' un intero, quindi non ci sono kwargs da estrarre.
-            for componente, _pagina in (grafico_deficit, grafico_droni, grafico_punti):
-                componente(model)
+        solara.Switch(label="Show plots (slows down the app)", value=show_plots)
+        if show_plots.value:
+            # make_plot_component always returns (function, page_number):
+            # the second element is an integer, so there are no kwargs to extract.
+            for component, _page in (deficit_plot, drone_plot, point_plot):
+                component(model)
 
-# --- LA PAGINA ---
-modello = CoverageModel()
+# --- PAGE ---
+model = CoverageModel()
 
-renderer = CustomSpaceRenderer(modello, backend="matplotlib")
-renderer.setup_agents(agent_portrayal) # stile visivo droni/punti
-renderer.post_process = configura_assi # configurazione assi e legenda
+renderer = CustomSpaceRenderer(model, backend="matplotlib")
+renderer.setup_agents(agent_portrayal) # drone/point visual style
+renderer.post_process = configure_axes # axes and legend configuration
 
-# QUESTE DUE RIGHE SONO OBBLIGATORIE, e la loro assenza non da' nessun errore.
-# SolaraViz ridisegna cosi':
+# THESE TWO LINES ARE MANDATORY, and their absence produces no error.
+# SolaraViz redraws as follows:
 #       if renderer.space_mesh: renderer.draw_structure()
 #       if renderer.agent_mesh: renderer.draw_agents()
-# Sono CONDIZIONALI, e space_mesh/agent_mesh nascono None: si valorizzano soltanto alla prima chiamata esplicita.
-# Senza, SolaraViz non disegna mai nulla e il pannello della mappa resta bianco con gli assi di default da 0 a 1.
+# They are CONDITIONAL, and space_mesh/agent_mesh start as None: they are initialized only upon the first explicit call.
+# Without them, SolaraViz never draws anything and the map panel remains blank with default axes from 0 to 1.
 renderer.draw_structure()
 renderer.draw_agents()
 
-# Il nome della variabile conta: solara cerca 'page' a livello di modulo.
-# Avvio: uv run solara run app.py
+# The variable name matters: solara looks for 'page' at module level.
+# Run: uv run solara run app.py
 page = SolaraViz(
-    modello, # la simulazione corrente
-    renderer, # il componente che disegna la mappa
-    components=[PannelloGrafici], # componenti aggiuntivi, nel tuo caso i grafici
-    model_params=model_params, # controlli dell’interfaccia
-    name="Copertura adattiva di punti di interesse", # titolo
+    model, # the current simulation
+    renderer, # the component that draws the map
+    components=[PlotPanel], # additional components, in this case the plots
+    model_params=model_params, # interface controls
+    name="Adaptive coverage of points of interest", # title
 )
