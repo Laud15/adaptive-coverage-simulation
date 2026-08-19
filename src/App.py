@@ -253,14 +253,14 @@ model_params = {
         "values": ["dispersed", "base", "top", "bottom", "left", "right"],
         "label": "initial deployment",
     },
-    "beta": Slider("beta: travel cost", value=0.05, min=0.0, max=0.30, step=0.01),
+    "beta": Slider("beta: fixed-wing travel cost", value=0.05, min=0.0, max=0.30, step=0.01),
     "cohere": Slider("attraction to point", value=0.25, min=0.15, max=0.60, step=0.05),
     "point_sensing_radius": Slider(
         "point sensing radius",
         value=10.0, min=8.0, max=25.0, step=0.5,
     ),
     "drone_sensing_radius": Slider(
-        "drone communication radius",
+        "drone perception and communication radius",
         value=10.0, min=8.0, max=25.0, step=0.5,
     ),
     "match": Slider("alignment between drones", value=0.05, min=0.0, max=0.20, step=0.01),
@@ -294,13 +294,27 @@ drone_plot = make_plot_component({"idle_drones": "tab:gray", "exploring_drones":
 # Third: the two failure modes, points left behind and wasted drones.
 point_plot = make_plot_component({"satisfied_points": "tab:green", "overservice": "tab:orange"}, post_process=resize_plot)
 
-# --- INTERFACE COMPONENT: SWITCH TO SHOW/HIDE PLOTS ---
+# --- INTERFACE COMPONENT: PARAMETER CONSTRAINTS AND PLOT SWITCH ---
 # Starts disabled (False) by default to ensure maximum performance
 show_plots = solara.reactive(False)
+
+PARAMETER_CONSTRAINTS = """
+**Parameter constraints**
+
+- `point_margin >= coverage_radius + speed`
+- `coverage_radius <= point_sensing_radius`
+- Quadcopter: `drone_sensing_radius >= point_sensing_radius`
+- Both platforms: `drone_sensing_radius >= separation`
+- Quadcopter: `0 < support_inset < coverage_radius`
+- Fixed wing: `cohere > 0` and `speed / cohere < coverage_radius`
+
+Invalid combinations are rejected when the model is rebuilt.
+"""
 
 @solara.component
 def PlotPanel(model):
     with solara.Column():
+        solara.Markdown(PARAMETER_CONSTRAINTS)
         solara.Switch(label="Show plots (slows down the app)", value=show_plots)
         if show_plots.value:
             # make_plot_component always returns (function, page_number):
@@ -325,11 +339,11 @@ renderer.draw_structure()
 renderer.draw_agents()
 
 # The variable name matters: solara looks for 'page' at module level.
-# Run: uv run solara run app.py
+# Run from the project root: uv run -m solara run src/App.py
 page = SolaraViz(
     model, # the current simulation
     renderer, # the component that draws the map
-    components=[PlotPanel], # additional components, in this case the plots
+    components=[PlotPanel], # parameter constraints and optional plots
     model_params=model_params, # interface controls
     name="Adaptive coverage of points of interest", # title
 )

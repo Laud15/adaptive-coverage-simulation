@@ -57,12 +57,12 @@ class CoverageModel(mesa.Model):
     def __init__ (
         self,
         # --- ENVIRONMENT: territory configuration ---
-        width=100.0, # territory width (x axis), in simulation units
-        height=100.0, # territory height (y axis)
+        width=110.0, # territory width (x axis), in simulation units
+        height=110.0, # territory height (y axis)
         n_drones=40, # number of drones, fixed throughout the simulation
         n_points=12, # number of points of interest created initially
         max_priority=3, # maximum randomly assigned quota: each point requests between 1 and 3 drones
-        point_margin=0.0, # controls how far point-of-interest centers are kept from boundaries when generated.
+        point_margin=None, # None -> coverage_radius + speed, keeps stationing zones and one exit step inside the world
         point_layout="random",  # random | clusters | dispersed | circle | edges | central
  
         # --- DEPLOYMENT: drone starting locations ---
@@ -130,7 +130,28 @@ class CoverageModel(mesa.Model):
                 f"use {POINT_LAYOUTS}."
             )
 
-        if point_margin < 0 or 2 * point_margin >= min(width, height):
+        if speed <= 0:
+            raise ValueError("speed must be > 0.")
+
+        if coverage_radius <= 0:
+            raise ValueError("coverage_radius must be > 0.")
+
+        # Keep every stationing zone, plus one complete exit step, inside the world.
+        # This avoids special boundary rules for support placement and radial departure.
+        minimum_point_margin = float(coverage_radius) + float(speed)
+
+        if point_margin is None:
+            point_margin = minimum_point_margin
+        else:
+            point_margin = float(point_margin)
+            if point_margin + 1e-9 < minimum_point_margin:
+                raise ValueError(
+                    f"point_margin ({point_margin}) < coverage_radius + speed "
+                    f"({minimum_point_margin}): stationing zones need one full "
+                    "exit step before the world boundary."
+                )
+
+        if 2 * point_margin >= min(width, height):
             raise ValueError(
                 f"Invalid point_margin ({point_margin}) for a {width}x{height} world."
             )

@@ -115,11 +115,17 @@ The quadcopter policy follows these rules:
 7. Supports do not calculate independent occupancy estimates. They relay the owner's value.
 8. `unique_id` is used only as a deterministic tie-break between locally visible drone candidates, never to identify points.
 
-The model enforces the following geometric constraints:
+The model enforces the following core geometry and coordination constraints:
 
+- `point_margin >= coverage_radius + speed`, so every stationing zone has room for one complete exit step before the world
+boundary;
 - `coverage_radius <= point_sensing_radius`, so a drone cannot cover a point without perceiving it;
 - for quadcopters, `drone_sensing_radius >= point_sensing_radius`, so a quadcopter that perceives a staffed point also perceives its owner at the center;
-- for both platforms, `drone_sensing_radius >= separation`, so every drone close enough to activate separation has already been perceived.
+- for both platforms, `drone_sensing_radius >= separation`, so every drone close enough to activate separation has already been perceived;
+- for quadcopters, `0 < support_inset < coverage_radius`;
+- for fixed-wing drones, `cohere > 0` and `speed / cohere < coverage_radius`.
+
+Additional validation keeps world and point margins within the territory, physical scale values positive, and delay and angle parameters non-negative.
 
 ## Quadcopter roles
 
@@ -375,7 +381,7 @@ The interface exposes the main environment and behavioral parameters.
 | `cohere` | Attraction strength toward a destination |
 | `match` | Alignment strength between nearby drones |
 | `explore` | Random exploration strength |
-| `beta` | Travel-distance cost used in the shared utility policy |
+| `beta` | Travel-distance cost used by the preliminary fixed-wing utility policy; it is not used by the quadcopter policy |
 | `avoid_angle_degrees` | Deviation angle away from a satisfied station |
 | `support_inset` | Distance by which supports stop inside the coverage boundary |
 | `release_delay_max_steps` | Maximum amplitude of the pseudorandom overcrowding wait |
