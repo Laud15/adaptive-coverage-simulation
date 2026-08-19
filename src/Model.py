@@ -143,15 +143,20 @@ class CoverageModel(mesa.Model):
                 "a drone could cover a point without perceiving it."
             )
 
-        # Owner and supports must be able to see one another. 
-        # Supports stop at radius coverage_radius - support_inset; 
-        # no ordering constraint is required between drone and point sensing radii.
-        support_operating_radius = coverage_radius - support_inset
-        if (drone_type == "quadcopter" and drone_sensing_radius + 1e-9 < support_operating_radius):
+        # A drone that perceives a staffed point must also perceive its owner at the center.
+        if drone_type == "quadcopter" and drone_sensing_radius + 1e-9 < point_sensing_radius:
             raise ValueError(
                 f"drone_sensing_radius ({drone_sensing_radius}) < "
-                f"coverage_radius - support_inset ({support_operating_radius}): "
-                "owner and supports might be unable to communicate."
+                f"point_sensing_radius ({point_sensing_radius}): "
+                "a drone could perceive a point without perceiving its owner."
+            )
+
+        # Every drone inside the separation distance must already be perceived.
+        if drone_sensing_radius + 1e-9 < separation:
+            raise ValueError(
+                f"drone_sensing_radius ({drone_sensing_radius}) < "
+                f"separation ({separation}): "
+                "a drone could enter the separation range before being perceived."
             )
 
         # The turning-radius constraint applies ONLY to the fixed-wing drone.

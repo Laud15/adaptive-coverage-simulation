@@ -264,7 +264,8 @@ model_params = {
         value=10.0, min=8.0, max=25.0, step=0.5,
     ),
     "match": Slider("alignment between drones", value=0.05, min=0.0, max=0.20, step=0.01),
-    "separation": Slider("separation between nearby drones", value=0.015, min=0.0, max=0.05, step=0.05),
+    "separation": Slider("separation between nearby drones", value=2.0, min=0.5, max=5.0, step=0.5),
+    "separate": Slider("separation force strength",value=0.015, min=0.0, max=0.05, step=0.005),
     "explore": Slider("exploration intensity", value=0.2, min=0.0, max=0.60, step=0.05),
     "avoid_angle_degrees": Slider(
         "deviation from satisfied station",
