@@ -1,3 +1,4 @@
+from matplotlib.patches import Rectangle
 import solara
 
 import numpy as np
@@ -170,22 +171,43 @@ class CustomSpaceRenderer(SpaceRenderer):
         points = [a for a in self.space.agents if is_point(a)]
         drones = [a for a in self.space.agents if is_drone(a)]
 
-        # 3) Coverage zones: ONE EllipseCollection instead of N add_patch(Circle) calls.
-        # Improves rendering performance while producing an identical drawing.
-        if points:
-            xy = np.array([p.position for p in points])
-            diameter = np.full(len(points), 2.0 * points[0].model.coverage_radius)
-            axes.add_collection(EllipseCollection(
-                widths=diameter, heights=diameter, angles=np.zeros(len(points)),
-                units="xy", offsets=xy, offset_transform=axes.transData,
-                facecolors="none", edgecolors="black", linestyles="--",
-                linewidths=0.7, alpha=0.45, zorder=0,
+        # 3) Study-area boundary. The surrounding region is the flight buffer.
+        reference_agent = points[0] if points else (drones[0] if drones else None)
+        if reference_agent is not None:
+            model = reference_agent.model
+            axes.add_patch(Rectangle(
+                (model.study_x_min, model.study_y_min),
+                model.study_width,
+                model.study_height,
+                fill=False,
+                edgecolor="black",
+                linewidth=1.0,
+                alpha=0.8,
+                zorder=0,
             ))
 
-        # 4) Numerical priority next to each point.
-        # Use scatter with a mathematical marker (e.g., "$3$") instead of ax.text:
-        # scatter creates a PathCollection,
-        # the same type of graphical object that the Mesa/Matplotlib renderer manages and clears correctly on every frame.
+        # 4) Coverage zones around points
+        if points:
+            xy = np.array([point.position for point in points])
+            diameter = np.full(len(points),2.0 * points[0].model.coverage_radius)
+
+            axes.add_collection(EllipseCollection(
+                widths=diameter,
+                heights=diameter,
+                angles=np.zeros(len(points)),
+                units="xy",
+                offsets=xy,
+                offset_transform=axes.transData,
+                facecolors="none",
+                edgecolors="black",
+                linestyles="--",
+                linewidths=0.7,
+                alpha=0.45,
+                zorder=0,
+            ))
+
+
+        # 5) Numerical priority next to each point.
         if points:
             offset_x = max(1.2, 0.018 * self.space.width)
             for point in points:
@@ -208,7 +230,7 @@ class CustomSpaceRenderer(SpaceRenderer):
                     zorder=4,
                 )
 
-        # 5) Direction arrows only for drones that are actually moving.
+        # 6) Direction arrows only for drones that are actually moving.
         # A hovering quadcopter retains its last direction as kinematic memory,
         # but drawing it as an arrow would falsely suggest movement.
         moving_drones = [d for d in drones if getattr(d, "moving", True)]
@@ -218,6 +240,10 @@ class CustomSpaceRenderer(SpaceRenderer):
             ang = np.radians(np.array([d.angle for d in moving_drones]))
             axes.quiver(x, y, np.cos(ang), np.sin(ang),
                       scale=45, width=0.0035, alpha=0.55, zorder=3)
+
+        # 7) Match the axes exactly to the physical flight space.
+        axes.set_xlim(self.space.x_min, self.space.x_max)
+        axes.set_ylim(self.space.y_min, self.space.y_max)
 
         return axes
 
@@ -301,7 +327,7 @@ show_plots = solara.reactive(False)
 PARAMETER_CONSTRAINTS = """
 **Parameter constraints**
 
-- `point_margin >= coverage_radius + speed`
+- `flight_buffer >= coverage_radius + speed`
 - `coverage_radius <= point_sensing_radius`
 - Quadcopter: `drone_sensing_radius >= point_sensing_radius`
 - Both platforms: `drone_sensing_radius >= separation`

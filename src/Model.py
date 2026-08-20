@@ -57,12 +57,13 @@ class CoverageModel(mesa.Model):
     def __init__ (
         self,
         # --- ENVIRONMENT: territory configuration ---
-        width=110.0, # territory width (x axis), in simulation units
-        height=110.0, # territory height (y axis)
+        width=100.0, # territory width (x axis), in simulation units
+        height=100.0, # territory height (y axis)
         n_drones=40, # number of drones, fixed throughout the simulation
         n_points=12, # number of points of interest created initially
         max_priority=3, # maximum randomly assigned quota: each point requests between 1 and 3 drones
-        point_margin=None, # None -> coverage_radius + speed, keeps stationing zones and one exit step inside the world
+        point_margin=0.0, # optional point-center margin inside the study area
+        flight_buffer=None, # None -> coverage_radius + speed on every side of the study area
         point_layout="random",  # random | clusters | dispersed | circle | edges | central
  
         # --- DEPLOYMENT: drone starting locations ---
@@ -130,31 +131,43 @@ class CoverageModel(mesa.Model):
                 f"use {POINT_LAYOUTS}."
             )
 
+        study_width = float(width)
+        study_height = float(height)
+
+        if study_width <= 0 or study_height <= 0:
+            raise ValueError("width and height must be > 0.")
+
+
         if speed <= 0:
             raise ValueError("speed must be > 0.")
 
         if coverage_radius <= 0:
             raise ValueError("coverage_radius must be > 0.")
 
-        # Keep every stationing zone, plus one complete exit step, inside the world.
-        # This avoids special boundary rules for support placement and radial departure.
-        minimum_point_margin = float(coverage_radius) + float(speed)
+        # The study area contains the points of interest.
+        # The surrounding flight space may also contain initial drone deployments and provides a buffer for stationing-zone exits.
+        minimum_flight_buffer = float(coverage_radius) + float(speed)
 
-        if point_margin is None:
-            point_margin = minimum_point_margin
+        if flight_buffer is None:
+            flight_buffer = minimum_flight_buffer
         else:
-            point_margin = float(point_margin)
-            if point_margin + 1e-9 < minimum_point_margin:
+            flight_buffer = float(flight_buffer)
+            if flight_buffer + 1e-9 < minimum_flight_buffer:
                 raise ValueError(
-                    f"point_margin ({point_margin}) < coverage_radius + speed "
-                    f"({minimum_point_margin}): stationing zones need one full "
+                    f"flight_buffer ({flight_buffer}) < coverage_radius + speed "
+                    f"({minimum_flight_buffer}): stationing zones need one full "
                     "exit step before the world boundary."
                 )
 
-        if 2 * point_margin >= min(width, height):
+        point_margin = float(point_margin)
+        if point_margin < 0 or 2 * point_margin >= min(study_width, study_height):
             raise ValueError(
-                f"Invalid point_margin ({point_margin}) for a {width}x{height} world."
+                f"Invalid point_margin ({point_margin}) for a "
+                f"{study_width}x{study_height} study area."
             )
+
+        flight_width = study_width + (2.0 * flight_buffer)
+        flight_height = study_height + (2.0 * flight_buffer)
 
         # A drone covering a point must also perceive it.
         if coverage_radius > point_sensing_radius:
@@ -224,8 +237,17 @@ class CoverageModel(mesa.Model):
         # and the final np.clip in Agents.py reads the same two names.
         # If they are named differently (self.available_width...), the drone fails with AttributeError at the first step,
         # not during construction: the error arrives late and appears unrelated to its cause.
-        self.width = float(width)
-        self.height = float(height)
+        self.study_width = study_width
+        self.study_height = study_height
+        self.flight_buffer = float(flight_buffer)
+
+        self.study_x_min = self.flight_buffer
+        self.study_x_max = self.study_x_min + self.study_width
+        self.study_y_min = self.flight_buffer
+        self.study_y_max = self.study_y_min + self.study_height
+
+        self.width = flight_width
+        self.height = flight_height
         self.n_drones = int(n_drones)
         self.n_points = int(n_points)
         self.drone_type = drone_type
@@ -479,10 +501,10 @@ class CoverageModel(mesa.Model):
             return positions
 
         # Rectangle actually available after point_margin.
-        x_min = float(margin)
-        x_max = self.width - float(margin)
-        y_min = float(margin)
-        y_max = self.height - float(margin)
+        x_min = self.study_x_min + float(margin)
+        x_max = self.study_x_max - float(margin)
+        y_min = self.study_y_min + float(margin)
+        y_max = self.study_y_max - float(margin)
         width = x_max - x_min
         height = y_max - y_min
 

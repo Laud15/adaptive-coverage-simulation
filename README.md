@@ -102,6 +102,25 @@ Its interpretation is:
 
 The objective is to reduce the total residual deficit while using information obtained through local perception and local communication.
 
+### Study area and flight buffer
+
+`width` and `height` define the study area in which points and initial drone deployments are generated. A buffer surrounds this rectangle on every side and belongs to the drone flight space, but it is not used to generate points or initial deployments.
+
+By default:
+
+```text
+flight_buffer = coverage_radius + speed
+```
+
+The outer `ContinuousSpace` therefore has dimensions:
+
+```text
+flight_width = width + 2 * flight_buffer
+flight_height = height + 2 * flight_buffer
+```
+
+With the default parameters, the study area is `100 x 100`, the buffer is `9` units on every side, and the complete flight space is `118 x 118`. The map draws the study-area boundary explicitly; the surrounding region is the maneuvering buffer.
+
 ## Core decentralized principles
 
 The quadcopter policy follows these rules:
@@ -117,7 +136,7 @@ The quadcopter policy follows these rules:
 
 The model enforces the following core geometry and coordination constraints:
 
-- `point_margin >= coverage_radius + speed`, so every stationing zone has room for one complete exit step before the world
+- flight_buffer >= coverage_radius + speed, so every stationing zone has room for one complete exit step before the world
 boundary;
 - `coverage_radius <= point_sensing_radius`, so a drone cannot cover a point without perceiving it;
 - for quadcopters, `drone_sensing_radius >= point_sensing_radius`, so a quadcopter that perceives a staffed point also perceives its owner at the center;
