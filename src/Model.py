@@ -88,7 +88,7 @@ class CoverageModel(mesa.Model):
         cohere=0.25, # strength of attraction toward the selected point
         separate=0.015, # strength of separation from drones that are too close
         match=0.05,# strength of alignment with the neighbors' average route
-        boundary=0.3, # strength of the inward boundary force
+        boundary=1.2, # strength of the inward boundary force
         margin=12.0, # distance from the boundary at which the boundary force activates
         quadcopter_margin=2.0,# reduced margin: the quadcopter can turn in place
 

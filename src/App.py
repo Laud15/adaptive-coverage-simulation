@@ -251,7 +251,7 @@ class CustomSpaceRenderer(SpaceRenderer):
 # THE MINIMUM VALUES ARE NOT ARBITRARY. Moving a slider REBUILDS the model from scratch,
 # so a combination that violates a guardrail raises ValueError and crashes the interface.
 # With the fixed parameters (speed, coverage_radius):
-#     cohere >= speed/coverage_radiu
+#     cohere >= speed/coverage_radius
 #     point_sensing_radius >= coverage_radius 
 #     fixed wing: 2*margin 
 #     quadcopter: 2*quadcopter_margin 
@@ -285,26 +285,14 @@ model_params = {
         "point sensing radius",
         value=10.0, min=8.0, max=25.0, step=0.5,
     ),
-    "drone_sensing_radius": Slider(
-        "drone perception and communication radius",
-        value=10.0, min=8.0, max=25.0, step=0.5,
-    ),
+    "drone_sensing_radius": Slider("drone perc. and comm. radius",value=10.0, min=8.0, max=25.0, step=0.5),
     "match": Slider("alignment between drones", value=0.05, min=0.0, max=0.20, step=0.01),
     "separation": Slider("separation between nearby drones", value=2.0, min=0.5, max=5.0, step=0.5),
     "separate": Slider("separation force strength",value=0.015, min=0.0, max=0.05, step=0.005),
     "explore": Slider("exploration intensity", value=0.2, min=0.0, max=0.60, step=0.05),
-    "avoid_angle_degrees": Slider(
-        "deviation from satisfied station",
-        value=10.0, min=0.0, max=30.0, step=1.0,
-    ),
-    "support_inset": Slider(
-        "support inset from boundary",
-        value=2.0, min=0.5, max=4.0, step=0.5,
-    ),
-    "release_delay_max_steps": Slider(
-        "overcrowding wait variability",
-        value=5, min=0, max=20, step=1,
-    ),
+    "avoid_angle_degrees": Slider("deviation from satisfied station",value=10.0, min=0.0, max=30.0, step=1.0),
+    "support_inset": Slider("support inset from boundary",value=2.0, min=0.5, max=4.0, step=0.5),
+    "release_delay_max_steps": Slider("overcrowding wait variability",value=5, min=0, max=20, step=1)
 }
 
 # --- PLOTS ---

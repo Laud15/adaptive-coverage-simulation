@@ -104,7 +104,7 @@ The objective is to reduce the total residual deficit while using information ob
 
 ### Study area and flight buffer
 
-`width` and `height` define the study area in which points and initial drone deployments are generated. A buffer surrounds this rectangle on every side and belongs to the drone flight space, but it is not used to generate points or initial deployments.
+`width` and `height` define the study area in which points are generated. A buffer surrounds this rectangle on every side and belongs to the drone flight space. Initial drone deployments may use the complete flight space, including the buffer.
 
 By default:
 
@@ -313,7 +313,7 @@ When the winner reaches the center:
 - the winner becomes owner;
 - the other candidates relocate to support positions.
 
-If multiple owners are temporarily associated with the same point, the same distance and `unique_id` rule identifies one authoritative owner. A losing owner is reassigned toward support relocation.
+Because all drones complete the election phase before roles are committed, candidates that reach the center in the same step apply the same distance and `unique_id` ordering. Only one owner can therefore be elected for each geometric point.
 
 Supports stop inside the coverage boundary at:
 

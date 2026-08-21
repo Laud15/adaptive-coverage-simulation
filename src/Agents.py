@@ -975,7 +975,7 @@ class QuadcopterDrone(BaseDrone):
                 if elected_owner is self: # VICTORY
                     # The owner never leaves due to overcrowding.
                     self.planned_station_role = "owner"
-                elif elected_owner is not None: # DEFEAT
+                elif elected_owner is not None: # LOSE
                     # A losing owner leaves the center and reaches the inner radial position before becoming SUPPORT.
                     self.planned_support_relocation = True
 
@@ -1127,9 +1127,10 @@ class QuadcopterDrone(BaseDrone):
             # Store the entry direction
             if self.entry_direction is None:
                 self._remember_entry_direction(self.target)
-                support_radius = max(0.0, self.coverage_radius - self.support_inset)
-                destination = (self.target.position + (self.entry_direction * support_radius))
-                self.support_destination = self._clip_position(destination)
+                
+            support_radius = max(0.0, self.coverage_radius - self.support_inset)
+            destination = (self.target.position + (self.entry_direction * support_radius))
+            self.support_destination = self._clip_position(destination)
 
             self._reset_release_wait()
             return
