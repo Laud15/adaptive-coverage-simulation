@@ -558,10 +558,7 @@ class QuadcopterDrone(BaseDrone):
         """Perceived points within coverage_radius."""
         covered = []
 
-        for point, distance in zip(
-            self.perceived_points,
-            self.perceived_point_distances,
-        ):
+        for point, distance in zip(self.perceived_points, self.perceived_point_distances):
             if distance <= self.coverage_radius:
                 covered.append((point, distance))
 
@@ -639,7 +636,7 @@ class QuadcopterDrone(BaseDrone):
 
     @staticmethod
     def _direct_point_rank(info):
-        """Need, priority, and distance used to select a useful point."""
+        """Need, distance, and priority used to select a useful point."""
         point = info["point"]
         deficit = info["owner_deficit"]
 
@@ -647,7 +644,7 @@ class QuadcopterDrone(BaseDrone):
         # priority represents the initial demand of the new station.
         need = point.priority if deficit is None else deficit
 
-        return (need, point.priority, -info["distance"])
+        return (need, -info["distance"], point.priority)
 
     def _station_deficit(self):
         """Returns the deficit published by the owner in communicate()."""
@@ -713,12 +710,17 @@ class QuadcopterDrone(BaseDrone):
             if deficit is None:
                 continue
 
+            # The source distance is used only to select the preferred relay for duplicate messages. 
+            # The point distance represents the actual trip toward the station center and is used to rank different requests.
+            point_distance = np.linalg.norm(self.position - neighbor.target.position)
+
             message = {
                 "drone": neighbor,
                 "position": neighbor.target.position.copy(),
                 "priority": neighbor.target.priority,
                 "deficit": deficit,
-                "distance": distance,
+                "distance": float(point_distance),
+                "source_distance": float(distance),
                 "source_is_owner": neighbor.station_role == "owner",
             }
 
@@ -739,7 +741,7 @@ class QuadcopterDrone(BaseDrone):
             prefer_new = (
                 message["source_is_owner"] and not existing["source_is_owner"] # Choose the owner because it is the direct, authoritative source.
             ) or ( # If both sources are owners or both are supports, prefer the drone closest to us
-                (message["source_is_owner"] == existing["source_is_owner"]) and (message["distance"] < existing["distance"])
+                (message["source_is_owner"] == existing["source_is_owner"]) and (message["source_distance"] < existing["source_distance"])
             )
 
             if prefer_new:
@@ -857,6 +859,7 @@ class QuadcopterDrone(BaseDrone):
         points_to_avoid = []
 
         for info in point_information:
+
             owner = info["owner"]
             owner_deficit = info["owner_deficit"]
 
@@ -886,11 +889,7 @@ class QuadcopterDrone(BaseDrone):
         requests = [info for info in stationary_information if info["deficit"] > 0]
 
         if requests:
-            choice = max(
-                requests,
-                key=lambda info: (info["deficit"], info["priority"], -info["distance"])
-            )
-
+            choice = max(requests, key=lambda info: (info["deficit"], -info["distance"], info["priority"]))
             self.planned_target = None
             self.planned_exploring = False
             self.planned_guidance_position = choice["position"].copy()

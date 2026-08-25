@@ -253,8 +253,8 @@ The drone never replaces an unavailable owner's estimate with a support-side or 
 If several directly perceived points are useful, selection uses:
 
 1. greater need, defined as the owner's deficit or the priority of an ownerless point;
-2. greater point priority when need is equal;
-3. shorter distance when both previous values are equal.
+2. shorter distance to the point center when need is equal;
+3. greater point priority when both previous values are equal.
 
 ### Station messages second
 
@@ -263,8 +263,8 @@ Messages from stationary drones are considered only when no directly perceived p
 If several requests exist, selection uses:
 
 1. greater deficit;
-2. greater priority when deficits are equal;
-3. shorter distance to the communicating stationary drone when deficit and priority are equal.
+2. shorter distance to the communicated station center when deficits are equal;
+3. greater priority when both previous values are equal.
 
 The result becomes `guidance_position`, not `target`, because the point itself has not yet been perceived directly.
 
@@ -277,11 +277,11 @@ Avoidance is implemented as a slight route deviation, not as a new destination o
 ```mermaid
 flowchart TD
     A["Evaluate directly perceived points"] --> B{"Useful point?"}
-    B -- Yes --> C["Choose by need, priority, then distance"]
+    B -- Yes --> C["Choose by need, distance, then priority"]
     C --> D["Set planned_target"]
     B -- No --> E["Read messages relayed by stationary drones"]
     E --> F{"Message with deficit > 0?"}
-    F -- Yes --> G["Choose by deficit, priority, then distance"]
+    F -- Yes --> G["Choose by deficit, distance, then priority"]
     G --> H["Set planned_guidance_position"]
     F -- No --> I["Explore"]
     I --> J{"Known satisfied station?"}
