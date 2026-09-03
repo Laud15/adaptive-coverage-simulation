@@ -53,7 +53,7 @@ class BaseDrone(ContinuousSpaceAgent):
         margin=20.0, # Distance from the boundary at which _boundary_force() starts acting
         beta=0.05, # penalizes distance when selecting the drone's destination, utility = deficit - beta * distance
         explore=0.2, # Controls random direction variability during exploration
-        release_delay_max_steps=5, # Amplitude of the random component of the wait before leaving due to overcrowding
+        release_delay_max_steps=5,  # Maximum random delay before a fixed-wing drone leaves an overcrowded target
     ):
         super().__init__(space=space, model=model)
 
@@ -100,9 +100,9 @@ class BaseDrone(ContinuousSpaceAgent):
         self.planned_target = None
         self.planned_exploring = False
 
-        # --- random wait before leaving an overcrowded point ---
-        # None = no wait is active. When it starts, the value is drawn
-        # only once and decremented at each step while overcrowding persists.
+        # --- fixed-wing random wait before leaving an overcrowded target ---
+        # This inherited state is not used by the quadcopter policy.
+        # None means that no fixed-wing release wait is active.
         self.release_wait_remaining = None
 
     # ------------------------------------------------------------------
@@ -449,6 +449,10 @@ class QuadcopterDrone(BaseDrone):
         # Supports and explorers do not build their own deficit estimate.
         self.advertised_deficit = None
 
+        # ID of the only support authorized by the owner to leave during the current step.
+        # None means that no support has been selected for release.
+        self.release_candidate_id = None
+
         # Transitional state: the drone is not yet a SUPPORT while reaching its inner radial position.
         # The decision to start relocation remains buffered through planned_support_relocation.
         self.support_destination = None # support_destination -> moving toward the support position
@@ -474,7 +478,7 @@ class QuadcopterDrone(BaseDrone):
         # Position of a satisfied station from which to deviate slightly during exploration.
         self.avoid_position = None # avoid_position -> deviates slightly from a satisfied station
         self.planned_avoid_position = None
-
+        
     @property
     def owner(self):
         return self.station_role == "owner"
@@ -484,18 +488,25 @@ class QuadcopterDrone(BaseDrone):
     # ------------------------------------------------------------------
 
     def communicate(self):
-        """Makes only the owner calculate and publish the deficit.
+        """Makes the owner publish the deficit and select at most one support for release.
 
         FREE and SUPPORT do not estimate station occupancy. The owner, stationary at the
         center, counts itself and only the visible OWNER/SUPPORT drones that fall within
         its target's coverage. The result is published in
         ``advertised_deficit`` and will be read or relayed by other drones in the
         subsequent decision phases.
+
+        When the published deficit is negative, the owner selects the eligible
+        support with the lowest unique_id and publishes that temporary decision
+        through ``release_candidate_id``. Supports read it only during the
+        subsequent station-decision phase.
         """
-        # The inherited field remains necessary for BaseDrone/FixedWingDrone, but is not
-        # used by the quadcopter policy.
+        # The inherited field remains necessary for BaseDrone/FixedWingDrone, 
+        # but is not used by the quadcopter policy.
         self.perceived_point_occupancies = []
         self.advertised_deficit = None
+        # Expire the release decision produced during the previous step.
+        self.release_candidate_id = None
 
         if self.station_role != "owner": # only the owner calculates the deficit
             return
@@ -510,6 +521,8 @@ class QuadcopterDrone(BaseDrone):
         if my_distance > self.coverage_radius:
             return
 
+        # Supports assigned to this station and eligible for local release.
+        eligible_supports = []
         # The owner counts itself.
         occupancy = 1
 
@@ -524,8 +537,14 @@ class QuadcopterDrone(BaseDrone):
             neighbor_point_distance = np.linalg.norm(neighbor.position - self.target.position)
             if neighbor_point_distance <= self.coverage_radius:
                 occupancy += 1
+                if (neighbor.station_role == "support" and self._same_point(neighbor.target, self.target)):
+                    eligible_supports.append(neighbor)
 
         self.advertised_deficit = self.target.priority - occupancy
+        # When the station is overcrowded, authorize exactly one associated support to leave.
+        if self.advertised_deficit < 0 and eligible_supports:
+            selected_support = min(eligible_supports, key=lambda support: support.unique_id)
+            self.release_candidate_id = selected_support.unique_id
 
     # ------------------------------------------------------------------
     # Geometric point association
@@ -750,66 +769,6 @@ class QuadcopterDrone(BaseDrone):
         return information
 
     # ------------------------------------------------------------------
-    # Overcrowding timer
-    # ------------------------------------------------------------------
-
-    def _draw_overcrowding_wait(self):
-        """Draws the waiting time of an overcrowded support."""
-        if self.target is None:
-            return 0
-
-        distance = np.linalg.norm(self.position - self.target.position)
-
-        exit_distance = max(0.0, self.coverage_radius - distance)
-
-        minimum_wait = max(1,int(np.ceil(exit_distance/ max(self.speed, EPS))))
-
-        # 1 near the center, 0 near the boundary.
-        depth = np.clip(1.0 - (distance / self.coverage_radius), 0.0, 1.0)
-
-        maximum_extra_wait = int(np.ceil(self.release_delay_max_steps* depth))
-
-        # Even near the boundary, keep a small
-        # pseudorandom interval if the parameter allows it.
-        if self.release_delay_max_steps > 0:
-            maximum_extra_wait = max(1, maximum_extra_wait)
-
-        if maximum_extra_wait == 0:
-            return minimum_wait
-
-        return int(self.model.rng.integers(minimum_wait,minimum_wait + maximum_extra_wait + 1))
-
-    def _support_should_depart(self, owner):
-        """Manages the support's waiting period in case of overcrowding."""
-        deficit = owner._station_deficit()
-
-        # No reliable information, or the point is not overcrowded.
-        if deficit is None or deficit >= 0:
-            self._reset_release_wait()
-            return False
-
-        # First step in which overcrowding is detected: 
-        # draw the timer only once and start waiting from the next step.
-        if self.release_wait_remaining is None:
-            self.release_wait_remaining = (self._draw_overcrowding_wait())
-            return False
-
-        if self.release_wait_remaining > 0:
-            self.release_wait_remaining -= 1
-            if self.release_wait_remaining > 0:
-                return False
-
-        # The timer has expired: explicitly reread the owner's current deficit
-        # and depart only if overcrowding persists.
-        final_deficit = owner._station_deficit()
-
-        if final_deficit is not None and final_deficit < 0:
-            return True
-
-        self._reset_release_wait()
-        return False
-
-    # ------------------------------------------------------------------
     # Target decision
     # ------------------------------------------------------------------
 
@@ -848,7 +807,6 @@ class QuadcopterDrone(BaseDrone):
             # The point is no longer perceived.
             self.planned_target = None
             self.planned_exploring = True
-            self._reset_release_wait()
             return
 
         # 1) POINTS FIRST. 
@@ -870,8 +828,7 @@ class QuadcopterDrone(BaseDrone):
             elif owner_deficit is not None and owner_deficit > 0:
                 useful_points.append(info)
             else:
-                # deficit <= 0 (or temporarily unavailable): do not
-                # recalculate it locally; only avoid the station.
+                # deficit <= 0 (or temporarily unavailable): do not recalculate it locally; only avoid the station.
                 points_to_avoid.append(info)
 
         if useful_points:
@@ -879,7 +836,6 @@ class QuadcopterDrone(BaseDrone):
 
             self.planned_target = choice["point"]
             self.planned_exploring = False
-            self._reset_release_wait()
             return
 
         # 2) DRONES SECOND. 
@@ -893,7 +849,6 @@ class QuadcopterDrone(BaseDrone):
             self.planned_target = None
             self.planned_exploring = False
             self.planned_guidance_position = choice["position"].copy()
-            self._reset_release_wait()
             return
 
         
@@ -904,8 +859,7 @@ class QuadcopterDrone(BaseDrone):
 
         self.planned_target = None
         self.planned_exploring = True
-        self._reset_release_wait()
-
+    
         # Put points_to_avoid data in the same format as avoid_candidates
         avoid_candidates = [
             {
@@ -977,14 +931,10 @@ class QuadcopterDrone(BaseDrone):
                 elif elected_owner is not None: # LOSE
                     # A losing owner leaves the center and reaches the inner radial position before becoming SUPPORT.
                     self.planned_support_relocation = True
-
-                self._reset_release_wait() # An owner must not retain any departure timer.
             return
 
         # Am I a support?
-        # -> if the owner exists, check its deficit:
-        #   -> nonnegative deficit: remain
-        #   -> negative deficit: wait and possibly depart
+        # -> if the owner exists, remain unless this support was selected for release
         # -> if the owner does not exist, fall back to the election
         if self.station_role == "support":
             owner = self._find_owner_for_point(self.target)
@@ -992,9 +942,10 @@ class QuadcopterDrone(BaseDrone):
             if owner is not None:
                 self.planned_station_role = "support"
 
-                if self._support_should_depart(owner):
-                    self.planned_station_role = None # cancel the planned support role
-                    self.planned_departing = True # plan the start of departure
+                # Only the support selected by the authoritative owner plans a radial departure.
+                if owner.release_candidate_id == self.unique_id:
+                    self.planned_station_role = None  # Cancel the planned support role.
+                    self.planned_departing = True  # Plan the start of departure.
 
                 return
             # Owner not found: do not return.
@@ -1081,7 +1032,7 @@ class QuadcopterDrone(BaseDrone):
             2. start of support relocation
             3. normal commit
         """
-        # A support has finished waiting (_support_should_depart() completed the wait) and must leave.
+        # The support selected by its owner must leave the station.
         if (self.planned_departing and self.departing_from is None):
             self.departing_from = self.target # store the point to leave
 
@@ -1098,7 +1049,6 @@ class QuadcopterDrone(BaseDrone):
             # The drone is leaving the zone and is not yet considered to be exploring
             self.exploring = False
 
-            self._reset_release_wait()
             return
 
         # The drone was already departing
@@ -1131,7 +1081,6 @@ class QuadcopterDrone(BaseDrone):
             destination = (self.target.position + (self.entry_direction * support_radius))
             self.support_destination = self._clip_position(destination)
 
-            self._reset_release_wait()
             return
 
 
@@ -1273,8 +1222,7 @@ class QuadcopterDrone(BaseDrone):
             self.avoid_position = None
 
             self.exploring = True
-            self._reset_release_wait()
-
+        
     # ------------------------------------------------------------------
     # Guidance and deviation
     # ------------------------------------------------------------------

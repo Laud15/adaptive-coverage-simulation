@@ -198,6 +198,8 @@ The principal current/planned pairs are:
 
 `planned_support_relocation` and `planned_departing` buffer the two transitional decisions.
 
+`release_candidate_id` is instead a temporary owner message: it is produced during `communicate()`, read by supports during `decide_station()`, and reset before the next communication decision. The selected support buffers its own state change through `planned_departing`.
+
 ## Owner communication and support relaying
 
 ### Owner calculation
@@ -327,31 +329,15 @@ The support position lies along the outward radial direction associated with the
 
 Overcrowding exists when the owner reports `deficit < 0`.
 
-The owner never leaves merely because the point is overcrowded. Only supports participate in the delayed departure procedure.
+The owner never leaves merely because the point is overcrowded. Only supports can be selected for departure.
 
-When a support first detects overcrowding, it draws one waiting time. The timer is not redrawn at every step.
+During `communicate()`, an overcrowded owner builds a local list of eligible supports. A drone is eligible only when it is visible to the owner, currently has the `support` role, is not departing, lies within the station's coverage radius, and is geometrically associated with the owner's point.
 
-The minimum wait is based on the approximate number of steps required to leave coverage:
+If at least one eligible support exists, the owner selects the one with the lowest `unique_id` and publishes its ID through `release_candidate_id`. This decision is temporary and is reset at the beginning of the next communication phase.
 
-```text
-exit_distance = max(0, coverage_radius - distance_from_center)
-minimum_wait = max(1, ceil(exit_distance / speed))
-```
+During `decide_station()`, every support finds the authoritative owner associated with its point. Only the support whose `unique_id` matches the owner's `release_candidate_id` plans a departure. All other supports remain stationary.
 
-A pseudorandom extra interval grows with depth inside the station:
-
-```text
-depth = clip(1 - distance_from_center / coverage_radius, 0, 1)
-maximum_extra_wait = ceil(release_delay_max_steps * depth)
-```
-
-Supports near the boundary therefore receive a smaller random interval, while supports nearer the center may wait longer. The random component reduces the probability of simultaneous departures.
-
-When the timer expires, the support rereads the owner's current deficit:
-
-- if the deficit is still negative, departure begins;
-- if the point is no longer overcrowded, the timer is reset and the support remains;
-- if authoritative information is unavailable, the timer is reset instead of forcing departure.
+At most one support per station begins departing during each step. During the following step, the owner recomputes the deficit from the updated stationing state and decides whether another support must be released.
 
 A departing support follows the same outward radial direction stored when it entered the station. After crossing the coverage boundary, it clears its stationing state and resumes exploration.
 
@@ -403,7 +389,7 @@ The interface exposes the main environment and behavioral parameters.
 | `beta` | Travel-distance cost used by the preliminary fixed-wing utility policy; it is not used by the quadcopter policy |
 | `avoid_angle_degrees` | Deviation angle away from a satisfied station |
 | `support_inset` | Distance by which supports stop inside the coverage boundary |
-| `release_delay_max_steps` | Maximum amplitude of the pseudorandom overcrowding wait |
+| `release_delay_max_steps` | Maximum random overcrowding delay used only by the preliminary fixed-wing policy |
 
 `separation` and `separate` are intentionally distinct: the first is a distance, while the second is a force coefficient.
 

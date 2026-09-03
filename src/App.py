@@ -238,8 +238,7 @@ class CustomSpaceRenderer(SpaceRenderer):
             x = np.array([d.position[0] for d in moving_drones])
             y = np.array([d.position[1] for d in moving_drones])
             ang = np.radians(np.array([d.angle for d in moving_drones]))
-            axes.quiver(x, y, np.cos(ang), np.sin(ang),
-                      scale=45, width=0.0035, alpha=0.55, zorder=3)
+            axes.quiver(x, y, np.cos(ang), np.sin(ang), scale=45, width=0.0035, alpha=0.55, zorder=3)
 
         # 7) Match the axes exactly to the physical flight space.
         axes.set_xlim(self.space.x_min, self.space.x_max)
@@ -292,7 +291,7 @@ model_params = {
     "explore": Slider("exploration intensity", value=0.2, min=0.0, max=0.60, step=0.05),
     "avoid_angle_degrees": Slider("deviation from satisfied station",value=10.0, min=0.0, max=30.0, step=1.0),
     "support_inset": Slider("support inset from boundary",value=2.0, min=0.5, max=4.0, step=0.5),
-    "release_delay_max_steps": Slider("overcrowding wait variability",value=5, min=0, max=20, step=1)
+    "release_delay_max_steps": Slider("fixed-wing overcrowding wait variability",value=5, min=0, max=20, step=1)
 }
 
 # --- PLOTS ---

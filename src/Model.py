@@ -96,14 +96,14 @@ class CoverageModel(mesa.Model):
         beta=0.05, # travel cost: how much distance is penalized when selecting a point
         explore=0.2, # random steering strength when no point needing service is visible
 
-        # --- RELEASE DUE TO OVERCROWDING ---
-        # BaseDrone/fixed wing: maximum random delay in the shared release logic.
-        # Quadcopter: maximum amplitude of the pseudorandom component of the support timer.
+        # --- FIXED-WING RELEASE DUE TO OVERCROWDING ---
+        # Maximum random delay used by the fixed-wing target-release logic.
+        # The quadcopter policy does not use this parameter.
         release_delay_max_steps=5,
 
         # --- QUADCOPTER COORDINATION ---
-        # Small deviation applied by an explorer when it encounters a station
-        # that is already satisfied. It is expressed in degrees for immediate interpretation.
+        # Small deviation applied by an explorer when it encounters a station that is already satisfied. 
+        # It is expressed in degrees for immediate interpretation.
         avoid_angle_degrees=10.0,
 
         # How far inside the coverage boundary supports stop.
