@@ -313,31 +313,17 @@ class CoverageModel(mesa.Model):
             )
         )
 
-        # idx = progressive index for colors and metrics. Assign it here rather than in the
-        # constructor because a point does not know the order in which it was created.
-        for i in range(self.n_points):
-            self.target_agents[i].idx = i
+        # Stable point identifier used by visualization, metrics, and dynamic events.
+        # It is separate from Mesa's unique_id, which is shared by every agent type.
+        self.target_agents_by_idx = {}
 
-        # --- STRUCTURAL DIAGNOSTICS ---
-        # total_demand = sum of quotas = number of "drone slots" requested by the territory.
-        # With priority as an absolute quota, if total_demand > n_drones, the system has a STRUCTURAL DEFICIT: no algorithm, not even the oracle.
-        # Centralized, can reduce the residual deficit to zero.
-        # unavoidable_deficit is the FLOOR of the main metric-
-        self.total_demand = 0.0
-        for point in self.target_agents:
-            self.total_demand += point.priority
-        self.unavoidable_deficit = max(0.0, self.total_demand - self.n_drones)
+        for idx, point in enumerate(self.target_agents):
+            point.idx = idx
+            self.target_agents_by_idx[idx] = point
 
-        # NOTE: unavoidable_deficit is a CONDITIONAL floor. 
-        # It assumes that each drone provides at most one occupancy unit.
-        # with overlapping zones, 10 drones may produce an occupancy of 13, and the residual deficit falls BELOW the floor. 
-        # This is not a calculation error: the assumption no longer holds. 
-        self.overlapping_zones = 0
-        for i in range(self.n_points):
-            for j in range(i + 1, self.n_points):
-                d = np.linalg.norm(self.target_agents[i].position - self.target_agents[j].position)
-                if d < 2.0 * coverage_radius:
-                    self.overlapping_zones += 1
+        # First identifier available for a point created during the simulation.
+        # Identifiers of removed points will not be reused.
+        self._next_target_idx = len(self.target_agents)
 
         # --- DRONES: INITIAL POSITIONS AND DIRECTIONS ---
         # Side-based modes distribute drones along one side and orient them inward initially. 
@@ -434,9 +420,13 @@ class CoverageModel(mesa.Model):
         self.point_sensing_radius = float(point_sensing_radius)
         self.boundary_margin = float(boundary_margin)
 
+        # --- STRUCTURAL DIAGNOSTICS ---
+        # These quantities depend on the currently active points and must be recomputed after: births, deaths, and priority changes.
+        self._refresh_point_diagnostics()
+
         # Initial snapshot. For fixed-wing drones, coverage is geometric; 
         # for the quadcopter, a drone counts only after the OWNER/SUPPORT election, 
-        # it is correct not to count a quadcopter spawned in the zone while still FREE.
+        # it is correct not to count a quadcopter spawned in the zone while it still has no stationary role.
         self.update_occupancy()
 
         # --- DATA COLLECTION ---
@@ -616,6 +606,181 @@ class CoverageModel(mesa.Model):
         positions[:, 0] = np.clip(positions[:, 0], x_min, x_max)
         positions[:, 1] = np.clip(positions[:, 1], y_min, y_max)
         return positions
+
+    # ------------------------------------------------------------------
+    # DYNAMIC POINT MANAGEMENT
+    # ------------------------------------------------------------------
+
+    def create_point(self, position, priority, point_idx=None):
+        """Create and register a new active point of interest.
+        
+        The point receives a stable point-specific identifier.
+        """
+        # A point quota must remain a positive integer. 
+        # It is stored as a float for compatibility with the existing TargetAgent implementation.
+        try:
+            priority_value = float(priority)
+        except (TypeError, ValueError):
+            raise ValueError("Point priority must be a positive integer.") from None
+
+        if (not np.isfinite(priority_value) or priority_value <= 0 or not priority_value.is_integer()):
+            raise ValueError("Point priority must be a positive integer.")
+
+
+        # Convert and validate the position before constructing the agent,
+        # because construction automatically registers it with Mesa.
+        try:
+            position_array = np.asarray(position, dtype=float)
+        except (TypeError, ValueError):
+            raise ValueError("Point position must contain two finite coordinates.") from None
+
+        if position_array.shape != (2,) or not np.all(np.isfinite(position_array)):
+            raise ValueError("Point position must contain two finite coordinates.")
+
+        # Dynamic points follow the same center-generation bounds as initial points,
+        # including point_margin.
+        x_min = self.study_x_min + self.point_margin
+        x_max = self.study_x_max - self.point_margin
+        y_min = self.study_y_min + self.point_margin
+        y_max = self.study_y_max - self.point_margin
+
+        if not(x_min <= position_array[0] <= x_max and y_min <= position_array[1] <= y_max):
+            raise ValueError("Point position must lie inside the allowed study area.")
+
+        # If the scenario does not provide an identifier, use the next one.
+        if point_idx is None:
+            point_idx = self._next_target_idx
+        else:
+            if isinstance(point_idx, bool) or not isinstance(point_idx, (int, np.integer)):
+                raise TypeError("point_idx must be an integer.")
+
+            point_idx = int(point_idx)
+
+            if point_idx < 0:
+                raise ValueError("point_idx must be non-negative.")
+
+            if point_idx in self.target_agents_by_idx:
+                raise ValueError(f"A point with idx={point_idx} is already active.")
+
+            # Point identifiers are monotonically increasing. 
+            # An identifier lower than the next available one may have been used previously.
+            if point_idx < self._next_target_idx:
+                raise ValueError(f"Point idx={point_idx} cannot be reused.")
+
+        # TargetAgent construction automatically registers the new agent in both the Mesa model and the continuous space.
+        point = TargetAgent(model=self, space=self.space, position=position_array, priority=priority_value)
+
+        # Register the same object in the project-specific collections.
+        point.idx = point_idx
+        self.target_agents.append(point)
+        self.target_agents_by_idx[point_idx] = point
+
+        # Keep the automatic counter ahead of every explicitly assigned ID.
+        self._next_target_idx = max(self._next_target_idx, point_idx + 1)
+
+        self._refresh_point_diagnostics()
+        return point
+
+
+    def change_point_priority(self, point_idx, new_priority):
+        """Change the requested quota of an active point.
+
+        The point keeps the same identity and position. Only its requested
+        quota and the model-level diagnostics are updated.
+        """
+        # A boolean must not be silently interpreted as point 0 or point 1.
+        if isinstance(point_idx, bool) or not isinstance(point_idx,(int, np.integer)):
+            raise TypeError("point_idx must be an integer.")
+
+        point_idx = int(point_idx)
+
+        # Only currently active points can change their quota.
+        if point_idx not in self.target_agents_by_idx:
+            raise KeyError(f"No active point with idx={point_idx}.")
+
+        # The requested quota must remain a positive integer.
+        try:
+            priority_value = float(new_priority)
+        except (TypeError, ValueError):
+            raise ValueError("Point priority must be a positive integer.") from None
+
+        if (not np.isfinite(priority_value) or priority_value <= 0 or not priority_value.is_integer()):
+            raise ValueError("Point priority must be a positive integer.")
+
+        point = self.target_agents_by_idx[point_idx]
+        point.priority = priority_value
+
+        # Total demand and its derived diagnostics change with the quota.
+        self._refresh_point_diagnostics()
+
+
+    def remove_point(self, point_idx):
+        """Remove an active point and clear every direct drone association.
+
+        This operation must run during the environmental-event phase, before
+        perception starts for the current step.
+        """
+        # A boolean must not be silently interpreted as point 0 or point 1.
+        if isinstance(point_idx, bool) or not isinstance(point_idx,(int, np.integer)):
+            raise TypeError("point_idx must be an integer.")
+
+        point_idx = int(point_idx)
+
+        # Only an active point can be removed.
+        if point_idx not in self.target_agents_by_idx:
+            raise KeyError(f"No active point with idx={point_idx}.")
+
+        point = self.target_agents_by_idx[point_idx]
+
+        # This should never fail: the list and dictionary are maintained together. 
+        # Check before modifying anything to avoid partial removal.
+        if point not in self.target_agents:
+            raise RuntimeError("Point registry and active-point list are inconsistent.")
+
+        # Clear current and buffered references before removing the point from Mesa. 
+        # No drone may access point.position after point.remove().
+        for drone in self.drone_agents:
+            drone.handle_removed_point(point)
+
+        # Remove the point from the project-specific active collections.
+        self.target_agents.remove(point)
+        del self.target_agents_by_idx[point_idx]
+
+        # ContinuousSpaceAgent.remove() deregisters the agent from both the
+        # Mesa model and the continuous space.
+        point.remove()
+
+        # Demand and geometric diagnostics now refer only to active points.
+        self._refresh_point_diagnostics()
+
+
+
+    def _refresh_point_diagnostics(self):
+        """Recompute diagnostics derived from the currently active points.
+
+        These values are global ground truth used for metrics and analysis.
+        They are not available to the decentralized drone policy.
+        """
+        # Total requested quota of all currently active points.
+        self.total_demand = 0.0
+
+        for point in self.target_agents:
+            self.total_demand += point.priority
+
+        # Lower bound under the assumption that each drone can contribute to at most one point. 
+        # It is not guaranteed when coverage zones overlap, because one drone can contribute to multiple points.
+        self.unavoidable_deficit = max(0.0, self.total_demand - self.n_drones)
+
+        # Count pairs of points whose coverage zones overlap.
+        self.overlapping_zones = 0
+        n_active_points = len(self.target_agents)
+
+        for i in range(n_active_points):
+            for j in range(i + 1, n_active_points):
+                distance = np.linalg.norm(self.target_agents[i].position - self.target_agents[j].position)
+
+                if distance < 2.0 * self.coverage_radius:
+                    self.overlapping_zones += 1
 
     # ------------------------------------------------------------------
     # METRICS

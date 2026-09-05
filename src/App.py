@@ -47,7 +47,7 @@ def agent_portrayal(agent):
     if is_point(agent):
         # --- POINTS OF INTEREST ---
         # TWO INDEPENDENT VISUAL CHANNELS, which is a deliberate choice, not a detail:
-        #   size  = priority -> DEMAND, which does not change
+        #   size  = priority -> CURRENT DEMAND
         #   color = deficit  -> STATE, which changes at every step
         # Combining them into a single channel would make it impossible to distinguish a satisfied quota-3 point from a satisfied quota-1 point.
         if agent.occupancy == 0:

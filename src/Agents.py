@@ -106,6 +106,38 @@ class BaseDrone(ContinuousSpaceAgent):
         self.release_wait_remaining = None
 
     # ------------------------------------------------------------------
+    # POINT LIFECYCLE
+    # ------------------------------------------------------------------
+
+    def _has_point_reference(self, point):
+        """Return whether the drone stores a reference to the given point."""
+        return self.target is point or self.planned_target is point
+
+    def handle_removed_point(self, point):
+        """Clear persistent state referring to a removed point.
+
+        Returns True when the drone was associated with the point and its
+        state was reset, otherwise returns False.
+        """
+        if not self._has_point_reference(point):
+            return False
+        # Clear both current and buffered references. Clearing only target
+        # would allow the following commit to restore planned_target.
+        self.target = None
+        self.planned_target = None
+
+        # The point no longer exists, so the drone immediately resumes
+        # exploration without performing an overcrowding-release transition.
+        self.exploring = True
+        self.planned_exploring = True
+
+        # Cancel a possible fixed-wing overcrowding-release wait.
+        # Quadcopter drones inherit this field but do not use it.
+        self.release_wait_remaining = None
+
+        return True
+
+    # ------------------------------------------------------------------
     # BASE GEOMETRY
     # ------------------------------------------------------------------
 
@@ -407,8 +439,8 @@ class FixedWingDrone(BaseDrone):
 
 
 class QuadcopterDrone(BaseDrone):
-    """Quadcopter with FREE / OWNER / SUPPORT / DEPARTING roles.
-        Overrides BaseDrone's communicate(), decide_target(), decide_station(), commit_decision(), and move() methods
+    """Quadcopter with OWNER/SUPPORT roles and explicit movement conditions.
+        Overrides BaseDrone's handle_remove_point(), communicate(), decide_target(), decide_station(), commit_decision(), and move() methods
     """
 
     drone_type = "quadcopter"
@@ -439,7 +471,8 @@ class QuadcopterDrone(BaseDrone):
         self.support_inset = float(support_inset)
 
         # Current and planned stationing role.
-        # station_role = None -> free/traveling drone
+        # station_role = None -> no stationary role; the drone may be exploring,
+        # traveling, relocating, or departing
         # station_role = "owner" -> owner stationary at the center
         # station_role = "support"  -> support stationary at the inner position
         self.station_role = None  
@@ -484,13 +517,50 @@ class QuadcopterDrone(BaseDrone):
         return self.station_role == "owner"
 
     # ------------------------------------------------------------------
+    # POINT LIFECYCLE
+    # ------------------------------------------------------------------
+        
+    def _has_point_reference(self, point):
+        """Extend the common check with the departure state."""
+        return (super()._has_point_reference(point) or self.departing_from is point)
+
+    def handle_removed_point(self, point):
+        """Clear every state associated with a removed point."""
+        # BaseDrone.handle_removed_point() calls the overridden _has_point_reference(),
+        # so it also recognizes departing_from.
+        if not super().handle_removed_point(point):
+            return False
+
+        # Clear current and buffered stationing roles.
+        self.station_role = None
+        self.planned_station_role = None
+
+        # Cancel support relocation and discard its geometric state.
+        self.support_destination = None
+        self.planned_support_relocation = False
+        self.entry_direction = None
+
+        # Cancel an ongoing or buffered departure.
+        self.departing_from = None
+        self.planned_departing = False
+
+        # Remove station information that could survive until commit.
+        self.advertised_deficit = None
+        self.release_candidate_id = None
+        self.guidance_position = None
+        self.planned_guidance_position = None
+        self.avoid_position = None
+        self.planned_avoid_position = None
+
+        return True
+    # ------------------------------------------------------------------
     # Quadcopter communication
     # ------------------------------------------------------------------
 
     def communicate(self):
         """Makes the owner publish the deficit and select at most one support for release.
 
-        FREE and SUPPORT do not estimate station occupancy. The owner, stationary at the
+        Non-owner drones do not estimate station occupancy. The owner, stationary at the
         center, counts itself and only the visible OWNER/SUPPORT drones that fall within
         its target's coverage. The result is published in
         ``advertised_deficit`` and will be read or relayed by other drones in the
@@ -892,12 +962,12 @@ class QuadcopterDrone(BaseDrone):
 
     def decide_station(self):
         """
-        Decides which stationing role the drone must have after commit_decision():
-            -FREE
-            -OWNER
-            -SUPPORT
-            -DEPARTING
-            -relocation toward SUPPORT
+        Decides the stationing role or transition to apply after commit_decision():
+            - no stationary role
+            - OWNER
+            - SUPPORT
+            - DEPARTING transition
+            - relocation toward SUPPORT
         """
         # These are the values that decide_station will set
         self.planned_station_role = None # Role that the drone will have after the commit
@@ -952,7 +1022,8 @@ class QuadcopterDrone(BaseDrone):
             # The former support continues with the normal election.
 
         point = self.planned_target
-        # From this point, the function handles free drones heading toward a point and former supports left without an owner.
+        # From this point, the function handles nonstationary drones heading toward a point
+        # and former supports left without an owner.
         # It uses planned_target, not target, because it must work with the decision just made by decide_target().
 
         # Do I have a planned_target?

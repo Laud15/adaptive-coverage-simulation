@@ -18,7 +18,7 @@ The central quadcopter idea is that every staffed point has one authoritative ow
 - [Project structure](#project-structure)
 - [Problem definition](#problem-definition)
 - [Core decentralized principles](#core-decentralized-principles)
-- [Quadcopter roles](#quadcopter-roles)
+- [Quadcopter roles and operational conditions](#quadcopter-roles-and-operational-conditions)
 - [Simulation pipeline](#simulation-pipeline)
 - [Owner communication and support relaying](#owner-communication-and-support-relaying)
 - [Target selection](#target-selection)
@@ -146,15 +146,20 @@ boundary;
 
 Additional validation keeps world and point margins within the territory, physical scale values positive, and delay and angle parameters non-negative.
 
-## Quadcopter roles
+## Quadcopter roles and operational conditions
 
-A quadcopter can be in one of the following operational conditions:
+The stationary role is represented by `station_role`:
 
-| Condition | Representation | Meaning |
+| Stationary role | Representation | Meaning |
 | --- | --- | --- |
-| Free | `station_role is None` | Exploring or traveling without a stationing role |
+| None | `station_role is None` | The drone has no stationary role; this alone does not identify its movement condition |
 | Owner | `station_role == "owner"` | Authoritative drone, stationary at the point center |
 | Support | `station_role == "support"` | Stationary drone helping cover the owner's point |
+
+The main operational conditions without a stationary role include exploration, travel toward a target or communicated station, owner candidacy, support relocation, and departure. In particular:
+
+| Transitional condition | Representation | Meaning |
+| --- | --- | --- |
 | Support relocation | `support_destination is not None` | Moving toward its inner radial position; not yet a support |
 | Departure | `departing_from is not None` | Leaving an overcrowded point along the remembered entry direction |
 
@@ -220,7 +225,7 @@ The owner then publishes:
 advertised_deficit = target.priority - locally_counted_occupancy
 ```
 
-Free, relocating, and departing drones are not part of the station occupancy estimate.
+Drones without an owner or support role, including relocating and departing drones, are not part of the station occupancy estimate.
 
 ### Support relaying
 
@@ -231,7 +236,7 @@ owner calculates deficit
         ↓
 support reads owner's deficit
         ↓
-nearby free drone receives the same authoritative deficit
+nearby nonstationary drone receives the same authoritative deficit
 ```
 
 This creates a one-hop extension of the owner's communication reach without introducing competing occupancy estimates.
@@ -341,8 +346,6 @@ At most one support per station begins departing during each step. During the fo
 
 A departing support follows the same outward radial direction stored when it entered the station. After crossing the coverage boundary, it clears its stationing state and resumes exploration.
 
-There is currently no post-departure cooldown, `pending_target`, or `departure_margin_factor`.
-
 ## Movement
 
 `move()` executes the current state after decisions have been committed. Its branch priority is:
@@ -397,7 +400,7 @@ The interface exposes the main environment and behavioral parameters.
 
 After movement, `CoverageModel.update_occupancy()` recomputes global ground truth.
 
-For quadcopters, a drone contributes to occupancy only when it is geometrically inside a point's coverage radius and its current role is `owner` or `support`. Free, relocating, and departing quadcopters are not counted. Fixed-wing occupancy retains the preliminary implementation's geometric definition.
+For quadcopters, a drone contributes to occupancy only when it is geometrically inside a point's coverage radius and its current role is `owner` or `support`. Quadcopters without a stationary role, including relocating and departing drones, are not counted. Fixed-wing occupancy retains the preliminary implementation's geometric definition.
 
 Ground-truth occupancy is used by the data collector, plots, and visualization. It is never fed back into the decentralized quadcopter decision policy.
 
