@@ -49,9 +49,9 @@ class CoverageModel(mesa.Model):
     """The world: a closed rectangle containing points of interest and drones.
 
     Model responsibilities (in implementation order):
-      1. create the space, points, and drones         
-      2. update point occupancy at each step 
-      3. collect deficit metrics       
+      1. create the space, initial points, and drones;
+      2. apply scheduled point events and execute the synchronous drone phases;
+      3. update point occupancy and collect metrics.
     """
 
     def __init__ (
@@ -65,6 +65,9 @@ class CoverageModel(mesa.Model):
         point_margin=0.0, # optional point-center margin inside the study area
         flight_buffer=None, # None -> coverage_radius + speed on every side of the study area
         point_layout="random",  # random | clusters | dispersed | circle | edges | central
+
+        # --- DYNAMIC POINT EVENTS ---
+        point_events=None, # deterministic point events applied at specified steps
  
         # --- DEPLOYMENT: drone starting locations ---
         deployment="dispersed", # dispersed | base | top | bottom | left | right
@@ -313,7 +316,7 @@ class CoverageModel(mesa.Model):
             )
         )
 
-        # Stable point identifier used by visualization, metrics, and dynamic events.
+        # Stable point identifier used by dynamic events and optional per-agent data.
         # It is separate from Mesa's unique_id, which is shared by every agent type.
         self.target_agents_by_idx = {}
 
@@ -324,6 +327,59 @@ class CoverageModel(mesa.Model):
         # First identifier available for a point created during the simulation.
         # Identifiers of removed points will not be reused.
         self._next_target_idx = len(self.target_agents)
+
+        # --- DYNAMIC POINT EVENT CALENDAR ---
+        # Events are grouped by step for constant-time lookup during the
+        # environmental-update phase.
+        self.point_events_by_step = {}
+
+        if point_events is None:
+            point_events = ()
+
+        required_fields_by_action = {
+            "create": {"position", "priority"},
+            "change_priority": {"point_idx", "new_priority"},
+            "remove": {"point_idx"},
+        }
+
+        for event in point_events:
+            if not isinstance(event, dict):
+                raise TypeError("Each point event must be represented by a dictionary.")
+            
+            if "step" not in event or "action" not in event:
+                raise ValueError("Each point event must contain 'step' and 'action'.")
+
+            step = event["step"]
+
+            if isinstance(step, bool) or not isinstance(step,(int, np.integer)):
+                raise TypeError("Point event step must be an integer.")
+
+            step = int(step)
+
+            if step < 1:
+                raise ValueError("Point event step must be at least 1.")
+
+            action = event["action"]
+
+            if (not isinstance(action, str) or action not in required_fields_by_action):
+                raise ValueError("Point event action must be 'create', 'change_priority', or 'remove'.")
+
+            missing_fields = (required_fields_by_action[action] - event.keys())
+
+            if missing_fields:
+                missing = ", ".join(sorted(missing_fields))
+                raise ValueError(f"Point event at step {step} is missing: {missing}.")
+
+            # Store an independent top-level copy so the model does not alter
+            # the scenario dictionary supplied by the experiment.
+            stored_event = dict(event)
+            stored_event["step"] = step
+
+            self.point_events_by_step.setdefault(step, []).append(stored_event)
+
+
+
+
 
         # --- DRONES: INITIAL POSITIONS AND DIRECTIONS ---
         # Side-based modes distribute drones along one side and orient them inward initially. 
@@ -432,10 +488,11 @@ class CoverageModel(mesa.Model):
         # --- DATA COLLECTION ---
         # Reporters are the METHODS below, passed as CoverageModel.name (the function, not its result: no parentheses).
         # Mesa invokes them at each collect, passing the model. Regular methods rather than lambdas for two reasons:
-        #  1) they can be called manually from a test script
+        #  1) they can be called manually from a test script,
         #  2) their name appears in a traceback instead of an anonymous "<lambda>."
-        # "unavoidable_deficit" instead uses the STRING form: Mesa reads the model attribute with the same name.
-        #  It is a constant, but repeating it in every row allows the floor line to be plotted without retrieving it separately.
+        # "total_demand" and "unavoidable_deficit" use the STRING form:
+        # Mesa reads the corresponding model attributes. 
+        # Both values are recomputed whenever the active points or their quotas change.
         model_reporters = {
             "residual_deficit": CoverageModel.residual_deficit,
             "normalized_deficit": CoverageModel.normalized_deficit,
@@ -443,12 +500,14 @@ class CoverageModel(mesa.Model):
             "overservice": CoverageModel.overservice,
             "idle_drones": CoverageModel.idle_drones,
             "exploring_drones": CoverageModel.exploring_drones,
+            "active_points": CoverageModel.active_points, 
+            "total_demand": "total_demand",
             "unavoidable_deficit": "unavoidable_deficit",
             "simulated_time_s": "simulated_time_s",
         }
 
-        # Per-agent data is disabled by default: 
-        # it produces n_drones + n_points rows AT EVERY STEP (52 x 600 = 31,200 rows for a single run),
+        # Per-agent data is disabled by default:
+        # it produces n_drones + M(t) rows at every step (52 x 600 = 31,200 rows in a static 40-drone, 12-point run),
         # and explodes in a sweep with dozens of combinations. Enable it when inspecting one simulation, not when running hundreds.
         agent_type_reporters = None
         if collect_agent_data:
@@ -611,6 +670,37 @@ class CoverageModel(mesa.Model):
     # DYNAMIC POINT MANAGEMENT
     # ------------------------------------------------------------------
 
+    def _apply_point_events(self):
+        """Apply the point events scheduled for the current step."""
+
+        # Direct dictionary lookup: if no event is scheduled for this step,
+        # use an empty tuple and perform no operation.
+        events = self.point_events_by_step.get(self.steps, ())
+
+        # Events scheduled at the same step are applied in the order in which they were provided in point_events.
+        for event in events:
+            action = event["action"]
+
+            if action == "create":
+
+                self.create_point(
+                    position=event["position"],
+                    priority=event["priority"],
+                    point_idx=event.get("point_idx"),
+                )
+
+            elif action == "change_priority":
+                self.change_point_priority(point_idx=event["point_idx"], new_priority=event["new_priority"])
+
+            elif action == "remove":
+                self.remove_point(point_idx=event["point_idx"])
+
+            else:
+                # This should be unreachable because actions are validated
+                # when the event calendar is constructed.
+                raise RuntimeError(f"Unsupported point event action: {action!r}.")
+
+            
     def create_point(self, position, priority, point_idx=None):
         """Create and register a new active point of interest.
         
@@ -786,6 +876,10 @@ class CoverageModel(mesa.Model):
     # METRICS
     # ------------------------------------------------------------------
 
+    def active_points(self):
+        """Return the number of points currently active in the model."""
+        return len(self.target_agents)
+
     def residual_deficit(self):
         """Total number of drones missing for every point to reach its quota.
 
@@ -913,31 +1007,34 @@ class CoverageModel(mesa.Model):
         """
         drones = self.agents_by_type[self.drone_class]
 
-        # 1. The territory changes.
+        # 1. Apply exogenous point events before drones observe the environment.
+        self._apply_point_events()
+
+        # 2. Active points execute their per-step behavior.
         self.agents_by_type[TargetAgent].do("step")
 
-        # 2. Everyone builds a local snapshot of the same spatial state.
+        # 3. Everyone builds a local snapshot of the same spatial state.
         drones.shuffle_do("perceive")
 
-        # 3. Everyone reads neighboring snapshots and builds their own estimate.
+        # 4. Everyone reads neighboring snapshots and builds their own estimate.
         drones.shuffle_do("communicate")
 
-        # 4. Everyone chooses a target without yet modifying the current target/role.
+        # 5. Everyone chooses a target without yet modifying the current target/role.
         drones.shuffle_do("decide_target")
 
-        # 5. This phase exists for all platforms: BaseDrone defines it as a no-op,
+        # 6. This phase exists for all platforms: BaseDrone defines it as a no-op,
         #    while QuadcopterDrone specializes it with owner/support roles and release from overcrowding.
         drones.shuffle_do("decide_station")
 
-        # 6. Decisions become current state.
+        # 7. Decisions become current state.
         drones.shuffle_do("commit_decision")
 
-        # 7. Physical movement.
+        # 8. Physical movement.
         drones.shuffle_do("move")
 
-        # 8. Ground truth: the model recounts actual stationing AFTER movement.
+        # 9. Ground truth: the model recounts actual stationing AFTER movement.
         self.update_occupancy()
 
-        # 9. Physical time and measurement. The t=0 row was collected in __init__.
+        # 10. Physical time and measurement. The t=0 row was collected in __init__.
         self.simulated_time_s += self.seconds_per_step
         self.datacollector.collect(self)

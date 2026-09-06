@@ -255,6 +255,7 @@ class CustomSpaceRenderer(SpaceRenderer):
 #     fixed wing: 2*margin 
 #     quadcopter: 2*quadcopter_margin 
 # For this reason, speed and coverage_radius are NOT exposed: making them adjustable would couple the constraints and no choice of limits would remain safe.
+# point_events is also not exposed: deterministic event calendars belong to reproducible experiment scenarios and are passed programmatically to CoverageModel.
 model_params = {
     "seed": Slider("random seed", value=42, min=0, max=200, step=1),
     "n_drones": Slider("drones", value=20, min=5, max=90, step=5),

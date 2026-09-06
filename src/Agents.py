@@ -4,10 +4,11 @@ from mesa.experimental.continuous_space import ContinuousSpaceAgent
 EPS = 1e-9
 
 class TargetAgent(ContinuousSpaceAgent):
-    """Passive point of interest.
+    """Passive, fixed-position point of interest.
 
     ``occupancy`` is the ground truth calculated by the model. Drones do not read it
-    to make decisions: it is used for metrics and visualization.
+    to make decisions: it is used for metrics and visualization. Birth, death, and
+    quota changes are managed by ``CoverageModel`` rather than by ``step()``.
     """
 
     def __init__(self, model, space, position, priority=1.0):
@@ -440,7 +441,8 @@ class FixedWingDrone(BaseDrone):
 
 class QuadcopterDrone(BaseDrone):
     """Quadcopter with OWNER/SUPPORT roles and explicit movement conditions.
-        Overrides BaseDrone's handle_remove_point(), communicate(), decide_target(), decide_station(), commit_decision(), and move() methods
+        Overrides BaseDrone's handle_removed_point(), communicate(), decide_target(),
+        decide_station(), commit_decision(), and move() methods.
     """
 
     drone_type = "quadcopter"

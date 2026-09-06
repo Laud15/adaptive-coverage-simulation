@@ -20,6 +20,7 @@ The central quadcopter idea is that every staffed point has one authoritative ow
 - [Core decentralized principles](#core-decentralized-principles)
 - [Quadcopter roles and operational conditions](#quadcopter-roles-and-operational-conditions)
 - [Simulation pipeline](#simulation-pipeline)
+- [Dynamic point lifecycle](#dynamic-point-lifecycle)
 - [Owner communication and support relaying](#owner-communication-and-support-relaying)
 - [Target selection](#target-selection)
 - [Owner election and support placement](#owner-election-and-support-placement)
@@ -87,6 +88,10 @@ The simulation contains:
 - a continuous two-dimensional territory;
 - a required drone quota for every point, stored as `priority`;
 - a stationing area around every point, defined by `coverage_radius`.
+
+Points remain fixed in space throughout their lifetime. Their active set and
+requested quotas may nevertheless change at the beginning of a simulation
+step through deterministic events supplied to the model.
 
 For a point with priority \(p\) and authoritative local occupancy estimate \(o\), the deficit is:
 
@@ -179,17 +184,24 @@ The destination fields have distinct meanings:
 
 ```mermaid
 flowchart LR
-    A["Current state"] --> B["TargetAgent.step()"]
-    B --> C["perceive()"]
-    C --> D["communicate()"]
-    D --> E["decide_target()"]
-    E --> F["decide_station()"]
-    F --> G["commit_decision()"]
-    G --> H["move()"]
-    H --> I["Update ground-truth occupancy"]
-    I --> J["Collect data"]
-    J --> K["New current state"]
+    A["Current state"] --> B["Apply scheduled point events"]
+    B --> C["TargetAgent.step()"]
+    C --> D["perceive()"]
+    D --> E["communicate()"]
+    E --> F["decide_target()"]
+    F --> G["decide_station()"]
+    G --> H["commit_decision()"]
+    H --> I["move()"]
+    I --> J["Update ground-truth occupancy"]
+    J --> K["Collect data"]
+    K --> L["New current state"]
 ```
+
+Scheduled point events are applied by the model before drone perception. They
+modify the environment but are not communicated globally to the decentralized
+policy. Newly created points must therefore be discovered through normal local
+perception and subsequent station messages. `TargetAgent.step()` remains a
+no-op because lifecycle changes that modify the agent set belong to the model.
 
 The `planned_*` fields buffer decisions between phases. A drone therefore reads stable current state from its neighbors instead of observing a partially applied next state caused by Mesa's internal execution order.
 
@@ -204,6 +216,77 @@ The principal current/planned pairs are:
 `planned_support_relocation` and `planned_departing` buffer the two transitional decisions.
 
 `release_candidate_id` is instead a temporary owner message: it is produced during `communicate()`, read by supports during `decide_station()`, and reset before the next communication decision. The selected support buffers its own state change through `planned_departing`.
+
+## Dynamic point lifecycle
+
+`CoverageModel` accepts an optional `point_events` sequence. Each event is a
+dictionary containing an integer `step` greater than or equal to one and one of
+the following actions:
+
+```python
+point_events = [
+    {
+        "step": 20,
+        "action": "create",
+        "position": (40.0, 60.0),
+        "priority": 2,
+    },
+    {
+        "step": 40,
+        "action": "change_priority",
+        "point_idx": 0,
+        "new_priority": 3,
+    },
+    {
+        "step": 60,
+        "action": "remove",
+        "point_idx": 0,
+    },
+]
+```
+
+Events scheduled for the same step are applied in the order in which they
+appear in `point_events`. Event dictionaries are grouped internally by step,
+while action-specific values are validated by the corresponding lifecycle
+operation when the event is executed.
+
+The model manages active points through both an ordered `target_agents` list
+and a `target_agents_by_idx` dictionary. Initial points receive indices from
+zero to `n_points - 1`; later indices increase monotonically and are never
+reused. These indices support model management, experiments, metrics, and
+optional per-agent data. They are not available to the decentralized drone policy, which
+continues to associate points geometrically.
+
+`create_point()` does not impose a minimum distance between active point
+centers. Because the drone policy treats positions within `EPS` as the same
+station, experiment scenarios should not keep conceptually distinct active
+points at coincident positions unless that equivalence is intentional. A point
+may instead be created at the position of a previously removed point and still
+receive a new, non-reused index.
+
+- `create_point()` creates and registers a `TargetAgent` in the Mesa model,
+  continuous space, active-point list, and index dictionary. Its position must
+  lie within the study-area bounds allowed by `point_margin`, and its quota
+  must be a positive integer. An explicit non-reused `point_idx` is optional.
+- `change_point_priority()` changes the positive integer quota of an active
+  point without changing its identity or fixed position.
+- `remove_point()` first clears current and buffered drone state that refers
+  directly to the point, then removes the point from both project registries,
+  the Mesa model, and the continuous space.
+
+When an associated point dies, owners, supports, drones traveling directly to
+it, relocating drones, and departing drones lose the corresponding target,
+role, and transition state and immediately return to exploration. A departing
+drone does not complete the radial exit, because the station no longer exists.
+The normal perception and decision phases then run on the updated environment,
+so the drone may select another useful destination during the same step.
+Perception snapshots from the preceding step are overwritten by `perceive()`
+before any decision phase reads them.
+
+Birth, death, and quota changes remain exogenous: the event calendar never
+uses drone state to decide whether an event occurs. A point born during a step
+is available to that step's perception phase, and an owner uses a changed quota
+in the subsequent communication phase.
 
 ## Owner communication and support relaying
 
@@ -371,14 +454,17 @@ Quadcopters use a smaller boundary-force margin than fixed-wing drones because t
 
 ## Parameters
 
-The interface exposes the main environment and behavioral parameters.
+`CoverageModel` accepts the environment and behavioral parameters below. The
+Solara interface exposes the main interactive subset; `point_events` is passed
+programmatically by a scenario or experiment.
 
 | Parameter | Meaning |
 | --- | --- |
 | `n_drones` | Number of drones |
-| `n_points` | Number of points of interest |
-| `max_priority` | Maximum randomly assigned point quota |
+| `n_points` | Number of points of interest created initially |
+| `max_priority` | Maximum quota used only for random initial point generation |
 | `point_layout` | Initial geometric distribution of points |
+| `point_events` | Optional deterministic sequence of point birth, death, and quota-change events |
 | `drone_type` | `quadcopter` or preliminary `fixed_wing` platform |
 | `deployment` | Initial drone deployment pattern |
 | `point_sensing_radius` | Distance within which points are perceived |
@@ -411,5 +497,20 @@ The interface can display:
 - `exploring_drones`: drones with no useful destination currently known;
 - `satisfied_points`: points whose occupancy reaches their priority;
 - `overservice`: excess drones assigned to already satisfied points.
+
+The data collector additionally records:
+
+- `normalized_deficit`: residual deficit divided by the current total demand,
+  or zero when no point is active;
+- `active_points`: current number of active points;
+- `total_demand`: sum of the quotas of the currently active points;
+- `unavoidable_deficit`: `max(0, total_demand - n_drones)`, which is only a
+  valid resource lower bound when each drone contributes to at most one point;
+- `simulated_time_s`: simulated physical time associated with the collected row.
+
+The first row is collected at time zero before any event or movement. Later
+rows are collected after point events, drone decisions, movement, and the
+ground-truth occupancy update for the corresponding step. Per-agent collection
+is optional and disabled by default.
 
 The map uses point color to show coverage state, point size and labels to show priority, drone color to show operational state, and a star marker to identify quadcopter owners.
