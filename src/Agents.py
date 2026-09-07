@@ -88,6 +88,13 @@ class BaseDrone(ContinuousSpaceAgent):
         # --- snapshot produced by the PERCEIVE phase ---
         self.neighbors = []
         self.neighbor_distances = []
+
+        # Immutable spatial and kinematic snapshot of the perceived drones.
+        # These lists remain aligned with neighbors and prevent move() from reading positions or directions already updated during the same phase.
+        self.neighbor_positions = []
+        self.neighbor_directions = []
+        self.neighbor_moving = []
+
         self.perceived_points = []
         self.perceived_point_distances = []
 
@@ -187,6 +194,10 @@ class BaseDrone(ContinuousSpaceAgent):
 
         self.neighbors = []
         self.neighbor_distances = []
+        self.neighbor_positions = []
+        self.neighbor_directions = []
+        self.neighbor_moving = []
+
         self.perceived_points = []
         self.perceived_point_distances = []
 
@@ -194,6 +205,12 @@ class BaseDrone(ContinuousSpaceAgent):
             if isinstance(agent, BaseDrone) and distance <= self.drone_sensing_radius:
                 self.neighbors.append(agent)
                 self.neighbor_distances.append(float(distance))
+
+                # Copy the state observed during perception.
+                # The referenced agent may update its live state before this drone executes move().
+                self.neighbor_positions.append(agent.position.copy())
+                self.neighbor_directions.append(agent.direction.copy())
+                self.neighbor_moving.append(bool(agent.moving))
             elif (isinstance(agent, TargetAgent) and distance <= self.point_sensing_radius):
                 self.perceived_points.append(agent)
                 self.perceived_point_distances.append(float(distance))
@@ -348,43 +365,58 @@ class BaseDrone(ContinuousSpaceAgent):
     # ------------------------------------------------------------------
 
     def _separation_force(self):
-        """Boids component that moves away from neighbors within ``separation``."""
-        neighbor_count = len(self.neighbors)
-        if neighbor_count == 0:
-            return np.zeros(2)
+        """Move away from perceived drones inside the separation radius.
 
-        neighbor_deltas = self.space.calculate_difference_vector(
-            self.position, agents=self.neighbors
-        )
-
+        The contribution increases smoothly as the distance decreases.
+        Stationary drones are included because moving drones must still avoid them.
+        """
         separation_vector = np.zeros(2)
         separation_neighbor_count = 0
 
+        for neighbor_position, distance in zip(self.neighbor_positions, self.neighbor_distances):
+            # The force is inactive on and outside the separation boundary.
+            if distance >= self.separation:
+                continue
 
-        for i in range(neighbor_count):
-            if self.neighbor_distances[i] < self.separation:
-                separation_vector -= neighbor_deltas[i]
-                separation_neighbor_count += 1
+            # Coincident positions do not define a geometric direction of escape.
+            # This degenerate case remains excluded because separation is a soft steering contribution,
+            # not a formal collision-avoidance guarantee.
+            if distance <= EPS:
+                continue
 
-        # No neighbor is close enough to activate separation.
+            away_direction = (self.position - neighbor_position) / distance
+
+            # Zero at the separation boundary and increasingly strong toward the neighboring drone.
+            proximity = self.separation - distance
+
+            separation_vector += away_direction * proximity
+            separation_neighbor_count += 1
+
         if separation_neighbor_count == 0:
             return np.zeros(2)
 
-        # Keep the same contribution normalization used in the original
-        # code: the sum is averaged over the total number of neighbors within drone_sensing_radius.
         return (separation_vector * self.separate_factor) / separation_neighbor_count
 
     def _alignment_force(self):
-        """Boids component that tends to align the route with the neighbors' routes."""
-        neighbor_count = len(self.neighbors)
-        if neighbor_count == 0:
+        """Align with the observed directions of moving neighboring drones.
+
+        Stationary drones are excluded because their retained direction is
+        kinematic memory rather than a current velocity direction.
+        """
+        direction_sum = np.zeros(2)
+        moving_neighbor_count = 0
+
+        for neighbor_direction, neighbor_was_moving in zip(self.neighbor_directions, self.neighbor_moving):
+            if not neighbor_was_moving:
+                continue
+
+            direction_sum += neighbor_direction
+            moving_neighbor_count += 1
+
+        if moving_neighbor_count == 0:
             return np.zeros(2)
 
-        direction_sum = np.zeros(2)
-        for neighbor in self.neighbors:
-            direction_sum += neighbor.direction
-
-        return (direction_sum * self.match_factor) / neighbor_count
+        return (direction_sum * self.match_factor) / moving_neighbor_count
 
     def _neighbor_force(self):
         """Convenience method for normal flight: separation + alignment."""

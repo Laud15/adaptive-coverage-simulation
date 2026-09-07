@@ -464,6 +464,13 @@ During normal flight:
 
 Normal flight also combines separation, alignment, and boundary forces. The resulting direction is normalized, and `_clip_position()` keeps the drone inside the simulated territory.
 
+Neighbor positions, directions, and movement states are copied during
+`perceive()` and remain unchanged throughout the movement phase. Separation
+considers both moving and stationary drones inside the separation radius; its
+contribution increases linearly as distance decreases. Alignment instead uses
+only neighbors that were moving in the perception snapshot, because a
+stationary drone's retained direction does not represent current motion.
+
 Quadcopters use a smaller boundary-force margin than fixed-wing drones because they can turn in place and require less advance warning near an edge.
 
 ## Parameters
