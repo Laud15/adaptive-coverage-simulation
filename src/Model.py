@@ -1,26 +1,18 @@
+import threading
+
 import numpy as np
 import pandas as pd
 import mesa
 from mesa.experimental.continuous_space import ContinuousSpace
 
 from Agents import FixedWingDrone, QuadcopterDrone, TargetAgent
-
+from PointsLayout import POINT_LAYOUTS, generate_point_positions
+from PointScenario import build_point_events, get_point_routine
 
 DRONE_CLASS_BY_TYPE = {
     "fixed_wing": FixedWingDrone,
     "quadcopter": QuadcopterDrone,
 }
-
-# Available initial conditions for points of interest.
-# These are geometric scenarios, not adaptive policies: they are selected once in __init__.
-POINT_LAYOUTS = (
-    "random",
-    "clusters",
-    "dispersed",
-    "circle",
-    "edges",
-    "central",
-)
 
 # --- THREAD-SAFE DATA COLLECTION CLASS ---
 class ThreadSafeDataCollector(mesa.DataCollector):
@@ -67,8 +59,10 @@ class CoverageModel(mesa.Model):
         point_layout="random",  # random | clusters | dispersed | circle | edges | central
 
         # --- DYNAMIC POINT EVENTS ---
-        point_events=None, # deterministic point events applied at specified steps
- 
+        point_events=None,  # optional precompiled low-level point calendar
+        point_routine="static",  # named high-level routine
+        event_seed=0,  # seed used only to compile dynamic point events
+
         # --- DEPLOYMENT: drone starting locations ---
         deployment="dispersed", # dispersed | base | top | bottom | left | right
         deployment_noise=1.0, # dispersion around the starting base/side
@@ -122,6 +116,9 @@ class CoverageModel(mesa.Model):
         #   self.random -> stdlib random.Random (required by ContinuousSpace)
         # both derived from the same seed: same seed = same simulation.
         super().__init__(rng=seed)
+
+        # Solara may render the continuous space while a background step is creating or removing points.
+        self.space_update_lock = threading.RLock()
 
         # --- VALIDITY CONSTRAINTS ---
 
@@ -281,10 +278,13 @@ class CoverageModel(mesa.Model):
             random=self.random,
             n_agents=self.n_drones + self.n_points,
         )
+        # Solara replaces renderer.space when it rebuilds the model.
+        # Keeping the lock on the space ensures that the renderer always acquires the lock belonging to the currently displayed model.
+        self.space.space_update_lock = self.space_update_lock
 
         # --- POINTS OF INTEREST: INITIAL CONDITION ---
-        # Like drone "deployment", point layout is an initial world choice.
-        # It does not change during the simulation.
+        # Like drone "deployment", point_layout defines the initial world condition.
+        # Later reconfiguration events may independently select another layout.
         # All modes use self.rng: same seed + same parameters = same territory, even when the geometry is pseudorandom.
         point_positions = self._generate_point_positions(layout=point_layout, margin=point_margin)
 
@@ -328,9 +328,34 @@ class CoverageModel(mesa.Model):
         # Identifiers of removed points will not be reused.
         self._next_target_idx = len(self.target_agents)
 
-        # --- DYNAMIC POINT EVENT CALENDAR ---
-        # Events are grouped by step for constant-time lookup during the
-        # environmental-update phase.
+        # --- HIGH-LEVEL POINT ROUTINE COMPILATION ---
+
+        # Resolve the selected high-level routine before constructing the low-level event calendar.
+        routine = get_point_routine(point_routine)
+
+        # An explicit low-level calendar and a non-static named routine would describe two competing event sources.
+        if point_events is not None and point_routine != "static":
+            raise ValueError("Use either point_events or a non-static point_routine not both.")
+
+        if point_events is None:
+            point_events = build_point_events(
+                routine=routine,
+                initial_n_points=self.n_points,
+                initial_max_priority=max_priority,
+                study_x_min=self.study_x_min,
+                study_x_max=self.study_x_max,
+                study_y_min=self.study_y_min,
+                study_y_max=self.study_y_max,
+                point_margin=self.point_margin,
+                event_seed=event_seed,
+            )
+
+        # Retain the scenario metadata for visualization, diagnostics, and reproducible experiment records.
+        self.point_routine = point_routine
+        self.event_seed = event_seed
+
+        # --- LOW-LEVEL POINT EVENT CALENDAR ---
+        # Events are grouped by step for constant-time lookup during the environmental-update phase.
         self.point_events_by_step = {}
 
         if point_events is None:
@@ -376,9 +401,6 @@ class CoverageModel(mesa.Model):
             stored_event["step"] = step
 
             self.point_events_by_step.setdefault(step, []).append(stored_event)
-
-
-
 
 
         # --- DRONES: INITIAL POSITIONS AND DIRECTIONS ---
@@ -537,134 +559,21 @@ class CoverageModel(mesa.Model):
     # ------------------------------------------------------------------
 
     def _generate_point_positions(self, layout, margin):
-        """Builds the initial positions of the points of interest.
+        """Generate the positions of the initial points of interest.
 
-        The layouts are deliberately simple and readable: they create worlds with
-        different geometries, rather than model a dynamic point-formation process.
-        All randomness goes through ``self.rng``, so it is reproducible through
-        ``seed``.
+        This wrapper supplies the current model geometry and random-number
+        generator to the shared point-layout function.
         """
-        n = self.n_points
-        positions = np.zeros((n, 2), dtype=float)
-        if n == 0:
-            return positions
-
-        # Rectangle actually available after point_margin.
-        x_min = self.study_x_min + float(margin)
-        x_max = self.study_x_max - float(margin)
-        y_min = self.study_y_min + float(margin)
-        y_max = self.study_y_max - float(margin)
-        width = x_max - x_min
-        height = y_max - y_min
-
-        if layout == "random":
-            # Original baseline: independent points uniformly distributed across the territory.
-            for i in range(n):
-                positions[i, 0] = self.rng.uniform(x_min, x_max)
-                positions[i, 1] = self.rng.uniform(y_min, y_max)
-
-        elif layout == "clusters":
-            # At most three clusters. Centers are random, but each cluster receives at least one point when n allows it.
-            # Dispersion is 5% of the smallest dimension of the available rectangle.
-            n_clusters = min(3, n)
-            centers = np.zeros((n_clusters, 2), dtype=float)
-
-            # Keep cluster centers away from the margin, so Gaussian noise is not clipped almost entirely on one side.
-            padding_x = 0.15 * width
-            padding_y = 0.15 * height
-            for g in range(n_clusters):
-                centers[g, 0] = self.rng.uniform(x_min + padding_x, x_max - padding_x)
-                centers[g, 1] = self.rng.uniform(y_min + padding_y, y_max - padding_y)
-
-            assignments = np.arange(n) % n_clusters
-            self.rng.shuffle(assignments)
-            sigma = 0.05 * min(width, height)
-
-            for i in range(n):
-                center = centers[assignments[i]]
-                positions[i] = center + self.rng.normal(0.0, sigma, size=2)
-
-        elif layout == "dispersed":
-            # Divide the territory into cells and use only one position per cell.
-            # A small jitter avoids a perfectly artificial grid, while keeping points much more separated than in the random baseline.
-            aspect_ratio = width / height
-            n_columns = max(1, int(np.ceil(np.sqrt(n * aspect_ratio))))
-            n_rows = max(1, int(np.ceil(n / n_columns)))
-
-            x_step = width / n_columns
-            y_step = height / n_rows
-            cells = []
-            for row in range(n_rows):
-                for column in range(n_columns):
-                    cells.append(
-                        [
-                            x_min + (column + 0.5) * x_step,
-                            y_min + (row + 0.5) * y_step,
-                        ]
-                    )
-
-            cells = np.asarray(cells, dtype=float)
-            self.rng.shuffle(cells)
-            jitter_x = 0.15 * x_step
-            jitter_y = 0.15 * y_step
-
-            for i in range(n):
-                positions[i, 0] = cells[i, 0] + self.rng.uniform(-jitter_x, jitter_x)
-                positions[i, 1] = cells[i, 1] + self.rng.uniform(-jitter_y, jitter_y)
-
-        elif layout == "circle":
-            # Equally spaced points on a circle centered in the territory.
-            # The initial angle is random: the shape remains a circle, but the seed determines the configuration's overall rotation.
-            center = np.array([(x_min + x_max) / 2.0, (y_min + y_max) / 2.0])
-            radius = 0.35 * min(width, height)
-            phase = self.rng.uniform(0.0, 2.0 * np.pi)
-
-            for i in range(n):
-                angle = phase + (2.0 * np.pi * i / n)
-                positions[i] = center + radius * np.array(
-                    [np.cos(angle), np.sin(angle)]
-                )
-
-        elif layout == "edges":
-            # Distribution near the four boundaries. 
-            # Side assignments are balanced and then shuffled, so they do not depend on the point index.
-            band = 0.08 * min(width, height)
-            sides = np.arange(n) % 4
-            self.rng.shuffle(sides)
-
-            for i, side in enumerate(sides):
-                offset = self.rng.uniform(0.0, band)
-                if side == 0:      # left
-                    positions[i] = [x_min + offset, self.rng.uniform(y_min, y_max)]
-                elif side == 1:    # right
-                    positions[i] = [x_max - offset, self.rng.uniform(y_min, y_max)]
-                elif side == 2:    # bottom
-                    positions[i] = [self.rng.uniform(x_min, x_max), y_min + offset]
-                else:              # top
-                    positions[i] = [self.rng.uniform(x_min, x_max), y_max - offset]
-
-        elif layout == "central":
-            # All points fall inside the central rectangle, whose width/height is 30% of the available territory.
-            # This is a central concentration, not a point-like cluster: points still retain some dispersion.
-            center_x = (x_min + x_max) / 2.0
-            center_y = (y_min + y_max) / 2.0
-            half_width = 0.15 * width
-            half_height = 0.15 * height
-
-            for i in range(n):
-                positions[i, 0] = self.rng.uniform(center_x - half_width, center_x + half_width)
-                positions[i, 1] = self.rng.uniform(center_y - half_height, center_y + half_height)
-
-        else:
-            # In practice this branch is protected by the guardrail in __init__,
-            # but keeping it makes the function self-contained and easier to test directly.
-            raise ValueError(f"Unrecognized point layout: {layout}")
-
-        # Safety common to all layouts:
-        # cluster noise/jitter cannot move points outside the rectangle allowed by point_margin.
-        positions[:, 0] = np.clip(positions[:, 0], x_min, x_max)
-        positions[:, 1] = np.clip(positions[:, 1], y_min, y_max)
-        return positions
+        return generate_point_positions(
+            layout=layout,
+            n_points=self.n_points,
+            study_x_min=self.study_x_min,
+            study_x_max=self.study_x_max,
+            study_y_min=self.study_y_min,
+            study_y_max=self.study_y_max,
+            margin=margin,
+            rng=self.rng,
+        )
 
     # ------------------------------------------------------------------
     # DYNAMIC POINT MANAGEMENT
@@ -1008,7 +917,9 @@ class CoverageModel(mesa.Model):
         drones = self.agents_by_type[self.drone_class]
 
         # 1. Apply exogenous point events before drones observe the environment.
-        self._apply_point_events()
+        # Structural space updates must not overlap with Solara rendering.
+        with self.space_update_lock:
+            self._apply_point_events()
 
         # 2. Active points execute their per-step behavior.
         self.agents_by_type[TargetAgent].do("step")

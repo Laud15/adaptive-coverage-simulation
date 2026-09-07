@@ -9,6 +9,7 @@ from mesa.visualization import SolaraViz, SpaceRenderer, Slider, make_plot_compo
 from mesa.visualization.components import AgentPortrayalStyle
 
 from Model import CoverageModel
+from PointScenario import POINT_ROUTINES
 
 # --- AGENT RECOGNITION ---
 # NO isinstance. Solara reloads modules while the app is running:
@@ -135,7 +136,7 @@ def resize_figure(ax, width, height):
     ax.get_figure().set_size_inches(width, height)
 
 def resize_plot(ax):
-    """post_process for the three plots: size only."""
+    """Post-process shared by all plots: size only."""
     resize_figure(ax, 4.6, 2.9)
 
 def configure_axes(ax):
@@ -162,7 +163,13 @@ class CustomSpaceRenderer(SpaceRenderer):
     """Custom renderer that ensures circles and arrows are drawn even after a Reset
     or a parameter change through a slider.
     """
+
     def draw_agents(self, *args, **kwargs):
+        """Draw a stable snapshot while structural events are not running."""
+        with self.space.space_update_lock:
+            return self._draw_agents_locked(*args, **kwargs)
+
+    def _draw_agents_locked(self, *args, **kwargs):
         # 1) Draws drones and points using the standard renderer
         axes = super().draw_agents(*args, **kwargs)
        
@@ -255,7 +262,8 @@ class CustomSpaceRenderer(SpaceRenderer):
 #     fixed wing: 2*margin 
 #     quadcopter: 2*quadcopter_margin 
 # For this reason, speed and coverage_radius are NOT exposed: making them adjustable would couple the constraints and no choice of limits would remain safe.
-# point_events is also not exposed: deterministic event calendars belong to reproducible experiment scenarios and are passed programmatically to CoverageModel.
+# Low-level point_events is not exposed.
+# The interface selects a named high-level routine, which the model compiles into a deterministic calendar.
 model_params = {
     "seed": Slider("random seed", value=42, min=0, max=200, step=1),
     "n_drones": Slider("drones", value=20, min=5, max=90, step=5),
@@ -267,6 +275,19 @@ model_params = {
         "values": ["random", "clusters", "dispersed", "circle", "edges", "central"],
         "label": "initial point layout",
     },
+    "point_routine": {
+        "type": "Select",
+        "value": "static",
+        "values": list(POINT_ROUTINES),
+        "label": "point event routine",
+    },
+    "event_seed": Slider(
+        "point event seed",
+        value=0,
+        min=0,
+        max=10000,
+        step=1,
+    ),
     "drone_type": {
         "type": "Select",
         "value": "quadcopter",
@@ -299,14 +320,42 @@ model_params = {
 # Names are EXACTLY the DataCollector model_reporters keys: if they do not
 # match, the plot remains empty without explaining why.
 # First plot: in the best case, the deficit will tend toward a lower asymptote corresponding to the unavoidable deficit. 
-deficit_plot = make_plot_component({"residual_deficit": "tab:red"}, post_process=resize_plot)
+deficit_plot = make_plot_component(
+    {
+        "residual_deficit": "tab:red"
+    },
+    post_process=resize_plot
+)
 
 # Second: the two types of inactive drone. 
 # The GAP between the two curves is diagnostic: it represents drones that selected a point but are not stationing there.
-drone_plot = make_plot_component({"idle_drones": "tab:gray", "exploring_drones": "tab:purple"}, post_process=resize_plot)
+drone_plot = make_plot_component(
+    {
+        "idle_drones": "tab:gray",
+        "exploring_drones": "tab:purple"
+    },
+    post_process=resize_plot
+)
 
 # Third: the two failure modes, points left behind and wasted drones.
-point_plot = make_plot_component({"satisfied_points": "tab:green", "overservice": "tab:orange"}, post_process=resize_plot)
+point_plot = make_plot_component(
+    {
+        "satisfied_points": "tab:green",
+        "overservice": "tab:orange"
+    },
+    post_process=resize_plot
+)
+
+# Fourth plot: direct view of environmental changes.
+# active_points changes after reconfiguration events, while total_demand
+# also reflects changes in the requested quotas.
+environment_plot = make_plot_component(
+    {
+        "active_points": "tab:blue",
+        "total_demand": "tab:red",
+    },
+    post_process=resize_plot
+)
 
 # --- INTERFACE COMPONENT: PARAMETER CONSTRAINTS AND PLOT SWITCH ---
 # Starts disabled (False) by default to ensure maximum performance
@@ -333,7 +382,7 @@ def PlotPanel(model):
         if show_plots.value:
             # make_plot_component always returns (function, page_number):
             # the second element is an integer, so there are no kwargs to extract.
-            for component, _page in (deficit_plot, drone_plot, point_plot):
+            for component, _page in (deficit_plot, drone_plot, point_plot, environment_plot):
                 component(model)
 
 # --- PAGE ---
