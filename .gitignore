@@ -18,5 +18,8 @@ wheels/
 # VS Code 
 .vscode/settings.json
 
+# experiments results
+/results
+
 # Personal notes
 /personal_notes
