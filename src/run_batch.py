@@ -10,8 +10,11 @@ from Model import CoverageModel
 
 
 def main():
-    """Run a minimal static batch experiment."""
+    """Run a small static parameter-comparison test."""
+    experiment_name = "coverage_radius_comparison_smoke_test"
     simulation_steps = 20
+
+    coverage_radius_values = [6.0, 8.0, 10.0]
 
     parameters = {
         "width": 100.0,
@@ -33,7 +36,7 @@ def main():
         "drone_sensing_radius": 10.0,
         "point_sensing_radius": 10.0,
         "separation": 2.0,
-        "coverage_radius": 8.0,
+        "coverage_radius": coverage_radius_values,
         "cohere": 0.25,
         "separate": 0.015,
         "match": 0.05,
@@ -48,8 +51,8 @@ def main():
         "collect_agent_data": False,
     }
 
-    # Mesa creates one model execution for each seed.
-    seeds = list(range(5))
+    # Mesa creates one model execution for each configuration and seed.
+    seeds = list(range(2))
 
     results = batch_run(
         CoverageModel,
@@ -83,7 +86,7 @@ def main():
     if missing_columns:
         raise RuntimeError(f"Batch results are missing columns: {sorted(missing_columns)}")
 
-    expected_runs = len(seeds)
+    expected_runs = len(seeds) * len(coverage_radius_values)
     actual_runs = results_df["RunId"].nunique()
 
     if actual_runs != expected_runs:
@@ -112,7 +115,7 @@ def main():
     # Create results/raw/ if it does not exist yet.
     raw_results_directory.mkdir(parents=True, exist_ok=True)
 
-    output_path = raw_results_directory / "smoke_test.csv"
+    output_path = raw_results_directory / f"{experiment_name}.csv"
 
     # index=False prevents Pandas from adding an unnecessary row-number column.
     results_df.to_csv(output_path, index=False)
