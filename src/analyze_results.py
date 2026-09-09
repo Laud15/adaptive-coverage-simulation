@@ -4,27 +4,28 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
-EXPERIMENT_NAME = "coverage_radius_comparison_smoke_test"
+EXPERIMENT_NAME = "coverage_radius_static_pilot"
 
 # Model parameters whose values distinguish the configurations being compared.
 COMPARISON_PARAMETERS = ["coverage_radius"]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-INPUT_PATH = PROJECT_ROOT / "results" / "raw" / f"{EXPERIMENT_NAME}.csv"
+EXPERIMENT_DIRECTORY = PROJECT_ROOT / "results" / EXPERIMENT_NAME
 
-SUMMARY_DIRECTORY = PROJECT_ROOT / "results" / "summary"
-SUMMARY_PATH = SUMMARY_DIRECTORY / f"{EXPERIMENT_NAME}_summary.csv"
-AGGREGATE_PATH = SUMMARY_DIRECTORY / f"{EXPERIMENT_NAME}_aggregate.csv"
-TIME_SERIES_PATH = SUMMARY_DIRECTORY / f"{EXPERIMENT_NAME}_time_series.csv"
+INPUT_PATH = EXPERIMENT_DIRECTORY / "raw_results.csv"
 
-FIGURES_DIRECTORY = PROJECT_ROOT / "results" / "figures"
-DEFICIT_FIGURE_PATH = FIGURES_DIRECTORY / f"{EXPERIMENT_NAME}_normalized_deficit.png"
-R_DELTA_FIGURE_PATH = FIGURES_DIRECTORY / f"{EXPERIMENT_NAME}_deficit_reduction.png"
-SATISFIED_FRACTION_FIGURE_PATH = FIGURES_DIRECTORY / f"{EXPERIMENT_NAME}_satisfied_fraction.png"
-OVERSERVICE_FIGURE_PATH = FIGURES_DIRECTORY / f"{EXPERIMENT_NAME}_overservice.png"
-FLEET_STATE_FIGURE_PATH = FIGURES_DIRECTORY / f"{EXPERIMENT_NAME}_fleet_state.png"
-J_DELTA_COMPARISON_FIGURE_PATH = (FIGURES_DIRECTORY/ f"{EXPERIMENT_NAME}_j_delta_comparison.png")
+SUMMARY_DIRECTORY = EXPERIMENT_DIRECTORY / "summaries"
+SUMMARY_PATH = SUMMARY_DIRECTORY / "run_summary.csv"
+AGGREGATE_PATH = SUMMARY_DIRECTORY / "aggregate_summary.csv"
+TIME_SERIES_PATH = SUMMARY_DIRECTORY / "time_series_summary.csv"
 
+FIGURES_DIRECTORY = EXPERIMENT_DIRECTORY / "figures"
+DEFICIT_FIGURE_PATH = FIGURES_DIRECTORY / "normalized_deficit.png"
+R_DELTA_FIGURE_PATH = FIGURES_DIRECTORY / "deficit_reduction.png"
+SATISFIED_FRACTION_FIGURE_PATH = FIGURES_DIRECTORY / "satisfied_fraction.png"
+OVERSERVICE_FIGURE_PATH = FIGURES_DIRECTORY / "overservice.png"
+FLEET_STATE_FIGURE_PATH = FIGURES_DIRECTORY / "fleet_state.png"
+J_DELTA_COMPARISON_FIGURE_PATH = FIGURES_DIRECTORY / "j_delta_comparison.png"
 
 def get_configuration_groups(data, comparison_parameters):
     """Return one labeled data subset for each configuration."""

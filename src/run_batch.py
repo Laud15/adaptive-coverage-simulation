@@ -1,5 +1,5 @@
 """Run reproducible batch experiments for CoverageModel."""
-
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -8,11 +8,13 @@ from mesa.batchrunner import batch_run
 from Model import CoverageModel
 
 
-
 def main():
-    """Run a small static parameter-comparison test."""
-    experiment_name = "coverage_radius_comparison_smoke_test"
-    simulation_steps = 20
+    """Run a static coverage-radius pilot experiment."""
+    experiment_name = "coverage_radius_static_pilot"
+    simulation_steps = 600
+
+    data_collection_period = 1
+    number_processes = 1
 
     coverage_radius_values = [6.0, 8.0, 10.0]
 
@@ -52,15 +54,37 @@ def main():
     }
 
     # Mesa creates one model execution for each configuration and seed.
-    seeds = list(range(2))
+    seeds = list(range(10))
+
+    # Record everything needed to identify and reproduce the experiment.
+    experiment_config = {
+        "experiment_name": experiment_name,
+        "simulation_steps": simulation_steps,
+        "data_collection_period": data_collection_period,
+        "number_processes": number_processes,
+        "seeds": seeds,
+        "parameters": parameters,
+    }
+
+    # Refuse to overwrite an experiment that has already been saved.
+    project_root = Path(__file__).resolve().parents[1]
+    experiment_directory = project_root / "results" / experiment_name
+    output_path = experiment_directory / "raw_results.csv"
+    config_path = experiment_directory / "experiment_config.json"
+
+    if experiment_directory.exists():
+        raise FileExistsError(
+            f"Experiment directory already exists: {experiment_directory}. "
+            "Choose a new experiment name or remove the existing directory explicitly."
+        )
 
     results = batch_run(
         CoverageModel,
         parameters=parameters,
         rng=seeds,
         max_steps=simulation_steps,
-        data_collection_period=1,
-        number_processes=1,
+        data_collection_period=data_collection_period,
+        number_processes=number_processes,
         display_progress=True,
     )
 
@@ -108,19 +132,18 @@ def main():
 
     print("Batch result validation passed.")
 
-    # Store generated data outside src/.
-    project_root = Path(__file__).resolve().parents[1]
-    raw_results_directory = project_root / "results" / "raw"
-
-    # Create results/raw/ if it does not exist yet.
-    raw_results_directory.mkdir(parents=True, exist_ok=True)
-
-    output_path = raw_results_directory / f"{experiment_name}.csv"
+    # Create the experiment directory only after the batch has completed
+    # and its results have passed validation.
+    experiment_directory.mkdir(parents=True)
 
     # index=False prevents Pandas from adding an unnecessary row-number column.
     results_df.to_csv(output_path, index=False)
 
+    with config_path.open("w", encoding="utf-8") as config_file:
+        json.dump(experiment_config, config_file, indent=4)
+
     print(f"Results saved to: {output_path}")
+    print(f"Experiment configuration saved to: {config_path}")
 
     columns_to_show = [
         "RunId",

@@ -27,6 +27,7 @@ The central quadcopter idea is that every staffed point has one authoritative ow
 - [Overcrowding and departure](#overcrowding-and-departure)
 - [Movement](#movement)
 - [Parameters](#parameters)
+- [Batch experiments and result analysis](#batch-experiments-and-result-analysis)
 - [Data collection and plots](#data-collection-and-plots)
 
 ## Technology stack
@@ -70,11 +71,15 @@ Open the local address displayed in the terminal. The interface provides simulat
 ```text
 adaptive-coverage-simulation/
 |-- src/
-|   |-- Agents.py   # Drone and point-of-interest agents
-|   |-- Model.py    # Simulation model, phase scheduling, and data collection
-|   `-- App.py      # Solara interface and real-time visualization
-|-- pyproject.toml  # Project metadata and direct dependencies
-|-- uv.lock         # Reproducible dependency lock file
+|   |-- Agents.py          # Drone and point-of-interest agents
+|   |-- Model.py           # Simulation model, scheduling, and data collection
+|   |-- App.py             # Solara interface and real-time visualization
+|   |-- PointScenario.py   # Reusable dynamic point-event routines
+|   |-- run_batch.py       # Reproducible batch experiment execution
+|   `-- analyze_results.py # Saved-result analysis and figure generation
+|-- results/               # Generated experiment outputs, ignored by Git
+|-- pyproject.toml         # Project metadata and direct dependencies
+|-- uv.lock                # Reproducible dependency lock file
 |-- LICENSE
 `-- README.md
 ```
@@ -505,6 +510,86 @@ instead passed programmatically by a scenario or experiment.
 | `release_delay_max_steps` | Maximum random overcrowding delay used only by the preliminary fixed-wing policy |
 
 `separation` and `separate` are intentionally distinct: the first is a distance, while the second is a force coefficient.
+
+## Batch experiments and result analysis
+
+`src/run_batch.py` executes reproducible parameter sweeps with Mesa's
+`batch_run()`. Before starting an experiment, configure its name, duration,
+model parameters, and explicit random seeds in the script. A scalar parameter
+value is held fixed, while a list of values defines a parameter to sweep.
+Mesa creates every combination of the supplied parameter values and repeats
+each configuration once for every seed. Therefore:
+
+```text
+total runs = parameter-value combinations * number of seeds
+```
+
+Using the same seed list for every configuration supports paired comparisons
+under corresponding pseudorandom conditions. Each run is still an independent
+`CoverageModel` instance: model parameters do not change during a run unless
+the change is explicitly part of the environmental point-event scenario.
+
+Run the configured batch from the project root:
+
+```bash
+uv run src/run_batch.py
+```
+
+The script validates the required output columns, the number of runs, the
+number of collected rows, and the relationship between simulation steps and
+physical time before saving anything. It then creates one directory named
+after the experiment. An existing experiment directory is never overwritten:
+use a new experiment name or explicitly remove results that are no longer
+needed before running the batch again.
+
+Configure `EXPERIMENT_NAME` in `src/analyze_results.py` with the same name used
+by the batch script. `COMPARISON_PARAMETERS` must contain the model parameters
+that distinguish the configurations to be compared. Then analyze the saved
+results without rerunning the simulation:
+
+```bash
+uv run src/analyze_results.py
+```
+
+Each experiment uses the following directory structure:
+
+```text
+results/
+`-- <experiment_name>/
+    |-- experiment_config.json
+    |-- raw_results.csv
+    |-- summaries/
+    |   |-- run_summary.csv
+    |   |-- aggregate_summary.csv
+    |   `-- time_series_summary.csv
+    `-- figures/
+        |-- normalized_deficit.png
+        |-- deficit_reduction.png
+        |-- satisfied_fraction.png
+        |-- overservice.png
+        |-- fleet_state.png
+        `-- j_delta_comparison.png
+```
+
+The generated files have distinct roles:
+
+- `experiment_config.json` records the experiment name, duration, collection
+  period, process count, seeds, and model parameters;
+- `raw_results.csv` contains the observations collected for every run and
+  simulation step;
+- `run_summary.csv` contains one summary row for each independent model run;
+- `aggregate_summary.csv` reports means and sample standard deviations across
+  replications of each parameter configuration;
+- `time_series_summary.csv` reports step-by-step means and sample standard
+  deviations for every configuration;
+- `figures/` contains the time-series and aggregate comparison plots generated
+  from the saved tables.
+
+The complete `results/` directory is ignored by Git because experiment outputs
+can be large and are generated artifacts. Results required for analysis or for
+the thesis must therefore be preserved separately or regenerated from the
+recorded configuration and repository version; they are not included in a
+normal commit or push.
 
 ## Data collection and plots
 
