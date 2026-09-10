@@ -568,7 +568,8 @@ results/
     |-- summaries/
     |   |-- run_summary.csv
     |   |-- aggregate_summary.csv
-    |   `-- time_series_summary.csv
+    |   |-- time_series_summary.csv
+    |   `-- event_response_summary.csv
     `-- figures/
         |-- normalized_deficit.png
         |-- capacity_adjusted_coverage.png
@@ -577,7 +578,8 @@ results/
         |-- fleet_state.png
         |-- scenario_characteristics.png
         |-- j_delta_comparison.png
-        `-- time_to_90_percent_nominal_service.png
+        |-- time_to_90_percent_nominal_service.png
+        `-- event_response_time.png  # Dynamic experiments only
 ```
 
 The generated files have distinct roles:
@@ -590,16 +592,23 @@ The generated files have distinct roles:
   simulation step;
 - `run_summary.csv` contains one summary row for each independent model run,
   including `J_delta` and the first time at which 90% of nominally obtainable
-  service is reached;
+  service is reached. For dynamic experiments it also reports the event
+  episodes, the episodes reaching the same threshold, and their mean response
+  time within the run;
 - `aggregate_summary.csv` reports means and sample standard deviations across
   replications of each parameter configuration, together with the number of
-  runs that reach the 90% threshold;
+  runs that reach the 90% threshold. Dynamic response times are first averaged
+  within each run and then summarized across independent runs;
 - `time_series_summary.csv` reports step-by-step means and sample standard
   deviations for every configuration;
+- `event_response_summary.csv` contains one auditable row for each run and
+  observable event episode, including its response window, reached/not-reached
+  outcome, and time to 90% of nominally obtainable service;
 - `figures/` contains the time-series and aggregate comparison plots generated
   from the saved tables. In dynamic experiments, every time-series plot marks
   the saved environmental-event times with labeled dashed vertical lines;
-  static experiments contain no event lines.
+  static experiments contain no event lines. `event_response_time.png` is
+  generated only when event episodes are present.
 
 The complete `results/` directory is ignored by Git because experiment outputs
 can be large and are generated artifacts. Results required for analysis or for

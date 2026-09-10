@@ -22,6 +22,7 @@ SUMMARY_DIRECTORY = EXPERIMENT_DIRECTORY / "summaries"
 SUMMARY_PATH = SUMMARY_DIRECTORY / "run_summary.csv"
 AGGREGATE_PATH = SUMMARY_DIRECTORY / "aggregate_summary.csv"
 TIME_SERIES_PATH = SUMMARY_DIRECTORY / "time_series_summary.csv"
+EVENT_RESPONSE_PATH = (SUMMARY_DIRECTORY / "event_response_summary.csv")
 
 FIGURES_DIRECTORY = EXPERIMENT_DIRECTORY / "figures"
 DEFICIT_FIGURE_PATH = FIGURES_DIRECTORY / "normalized_deficit.png"
@@ -32,6 +33,7 @@ POINT_STATE_FIGURE_PATH = FIGURES_DIRECTORY / "point_service_state.png"
 CAPACITY_ADJUSTED_COVERAGE_FIGURE_PATH = (FIGURES_DIRECTORY / "capacity_adjusted_coverage.png")
 TIME_TO_90_PERCENT_FIGURE_PATH = (FIGURES_DIRECTORY / "time_to_90_percent_nominal_service.png")
 SCENARIO_CHARACTERISTICS_FIGURE_PATH = (FIGURES_DIRECTORY / "scenario_characteristics.png")
+EVENT_RESPONSE_FIGURE_PATH = (FIGURES_DIRECTORY / "event_response_time.png")
 
 
 def load_event_markers(config_path):
@@ -63,6 +65,47 @@ def load_event_markers(config_path):
         event_markers,
         key=lambda marker: marker["simulated_time_s"],
     )
+
+def build_event_episodes(event_markers):
+    """Group simultaneous high-level events into observable event episodes."""
+    episodes_by_step = {}
+
+    for marker in event_markers:
+        event_step = int(marker["step"])
+        event_time_s = float(marker["simulated_time_s"])
+        event_type = str(marker["event_type"])
+
+        if event_step not in episodes_by_step:
+            episodes_by_step[event_step] = {
+                "event_time_s": event_time_s,
+                "event_types": [],
+            }
+        elif episodes_by_step[event_step]["event_time_s"] != event_time_s:
+            raise ValueError(
+                f"Event markers at step {event_step} have inconsistent times."
+            )
+
+        if event_type not in episodes_by_step[event_step]["event_types"]:
+            episodes_by_step[event_step]["event_types"].append(event_type)
+
+    event_episodes = []
+
+    for event_index, event_step in enumerate(
+        sorted(episodes_by_step),
+        start=1,
+    ):
+        episode = episodes_by_step[event_step]
+
+        event_episodes.append(
+            {
+                "event_index": event_index,
+                "event_step": event_step,
+                "event_time_s": episode["event_time_s"],
+                "event_types": " + ".join(episode["event_types"]),
+            }
+        )
+
+    return event_episodes
 
 
 def get_configuration_groups(data, comparison_parameters):
@@ -97,21 +140,18 @@ def get_configuration_groups(data, comparison_parameters):
 
     return configuration_groups
 
+
 def add_event_markers(axis, event_markers):
-    """Draw one dashed vertical line for each environmental event time."""
-    events_by_time = {}
+    """Draw one dashed vertical line for each observable event episode."""
+    event_episodes = build_event_episodes(event_markers)
 
-    for marker in event_markers:
-        event_time_s = float(marker["simulated_time_s"])
-        event_type = str(marker["event_type"]).replace("_", " ").title()
-
-        events_by_time.setdefault(event_time_s, [])
-
-        if event_type not in events_by_time[event_time_s]:
-            events_by_time[event_time_s].append(event_type)
-
-    for event_time_s, event_types in sorted(events_by_time.items()):
-        event_label = ", ".join(event_types)
+    for episode in event_episodes:
+        event_time_s = episode["event_time_s"]
+        event_label = (
+            episode["event_types"]
+            .replace("_", " ")
+            .title()
+        )
 
         axis.axvline(
             x=event_time_s,
@@ -119,6 +159,119 @@ def add_event_markers(axis, event_markers):
             linestyle="--",
             label=f"Event: {event_label} (t={event_time_s:g} s)",
         )
+
+
+def calculate_event_response_time_s(
+    run_data,
+    event_step,
+    event_time_s,
+    next_event_step,
+    threshold,
+):
+    """Return the time needed to reach the threshold within one event window."""
+    event_window = run_data[run_data["Step"] >= event_step]
+
+    if next_event_step is not None:
+        event_window = event_window[event_window["Step"] < next_event_step]
+
+    threshold_rows = event_window[event_window["capacity_adjusted_coverage"] >= threshold]
+
+    if threshold_rows.empty:
+        return float("nan")
+
+    first_threshold_time_s = threshold_rows["simulated_time_s"].min()
+    response_time_s = float(first_threshold_time_s - event_time_s)
+
+    if response_time_s < -1e-9:
+        raise ValueError(
+            "Threshold time precedes the corresponding event time."
+        )
+
+    return max(0.0, response_time_s)
+
+
+def build_event_response_summary(
+    data,
+    comparison_parameters,
+    event_markers,
+    threshold,
+):
+    """Return one response-time row for each run and event episode."""
+    event_episodes = build_event_episodes(event_markers)
+
+    output_columns = [
+        "RunId",
+        "seed",
+        *comparison_parameters,
+        "event_index",
+        "event_step",
+        "event_time_s",
+        "event_types",
+        "next_event_step",
+        "coverage_threshold",
+        "threshold_reached",
+        "time_to_90_percent_nominal_service_after_event_s",
+    ]
+
+    response_records = []
+
+    for run_id, run_data in data.groupby("RunId", sort=True):
+        run_data = run_data.sort_values("Step")
+        last_observed_step = int(run_data["Step"].max())
+
+        for episode_position, episode in enumerate(event_episodes):
+            event_step = episode["event_step"]
+
+            if event_step > last_observed_step:
+                raise ValueError(
+                    f"Event at step {event_step} lies beyond run "
+                    f"{run_id}, which ends at step {last_observed_step}."
+                )
+
+            if episode_position + 1 < len(event_episodes):
+                next_event_step = event_episodes[
+                    episode_position + 1
+                ]["event_step"]
+            else:
+                next_event_step = None
+
+            response_time_s = calculate_event_response_time_s(
+                run_data=run_data,
+                event_step=event_step,
+                event_time_s=episode["event_time_s"],
+                next_event_step=next_event_step,
+                threshold=threshold,
+            )
+
+            response_record = {
+                "RunId": run_id,
+                "seed": run_data["seed"].iloc[0],
+            }
+
+            for parameter in comparison_parameters:
+                response_record[parameter] = run_data[parameter].iloc[0]
+
+            response_record.update(
+                {
+                    "event_index": episode["event_index"],
+                    "event_step": event_step,
+                    "event_time_s": episode["event_time_s"],
+                    "event_types": episode["event_types"],
+                    "next_event_step": next_event_step,
+                    "coverage_threshold": threshold,
+                    "threshold_reached": not pd.isna(response_time_s),
+                    "time_to_90_percent_nominal_service_after_event_s": (
+                        response_time_s
+                    ),
+                }
+            )
+
+            response_records.append(response_record)
+
+    return pd.DataFrame.from_records(
+        response_records,
+        columns=output_columns,
+    )
 
 
 def save_time_series_plot(
@@ -327,6 +480,102 @@ def save_time_to_90_percent_comparison_plot(
     axis.margins(y=0.15)
     axis.set_ylim(bottom=0.0)
     axis.set_title(f"Time to {COVERAGE_THRESHOLD:.0%} of nominally obtainable service")
+    axis.grid(alpha=0.3)
+
+    if reached_mask.any():
+        axis.legend()
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    figure.tight_layout()
+    figure.savefig(output_path, dpi=200)
+    plt.close(figure)
+
+
+def save_event_response_comparison_plot(
+    data,
+    comparison_parameters,
+    output_path,
+):
+    """Save mean event-response statistics for each configuration."""
+    if len(comparison_parameters) != 1:
+        raise ValueError(
+            "The event-response comparison plot requires exactly "
+            "one comparison parameter."
+        )
+
+    parameter = comparison_parameters[0]
+    plot_data = data.sort_values(parameter).reset_index(drop=True)
+
+    mean_values = plot_data["mean_event_response_time_mean_s"]
+    std_values = (
+        plot_data["mean_event_response_time_std_s"]
+        .fillna(0.0)
+    )
+
+    reached_mask = mean_values.notna()
+
+    figure, axis = plt.subplots(figsize=(8, 5))
+
+    if reached_mask.any():
+        reached_positions = plot_data.index[reached_mask]
+
+        axis.errorbar(
+            reached_positions,
+            mean_values[reached_mask],
+            yerr=std_values[reached_mask],
+            fmt="o",
+            capsize=4,
+            label="Mean across runs ± 1 standard deviation",
+        )
+
+    for position, row in plot_data.iterrows():
+        reached_events = int(
+            row[
+                "event_episode_cases_reaching_90_percent_nominal_service"
+            ]
+        )
+        total_events = int(row["event_episode_cases"])
+        contributing_runs = int(
+            row["runs_contributing_to_event_response_mean"]
+        )
+        total_runs = int(row["replications"])
+
+        reached_label = (
+            f"{reached_events}/{total_events} events; "
+            f"{contributing_runs}/{total_runs} runs"
+        )
+
+        mean_time_s = row["mean_event_response_time_mean_s"]
+
+        if pd.notna(mean_time_s):
+            axis.annotate(
+                reached_label,
+                xy=(position, mean_time_s),
+                xytext=(0, 10),
+                textcoords="offset points",
+                ha="center",
+            )
+        else:
+            axis.text(
+                position,
+                0.03,
+                reached_label,
+                transform=axis.get_xaxis_transform(),
+                ha="center",
+                va="bottom",
+            )
+
+    axis.set_xticks(plot_data.index)
+    axis.set_xticklabels(plot_data[parameter].astype(str))
+    axis.set_xlabel(parameter)
+    axis.set_ylabel("Mean per-run event response time (s)")
+    axis.margins(y=0.15)
+    axis.set_ylim(bottom=0.0)
+    axis.set_title(
+        f"Response time to {COVERAGE_THRESHOLD:.0%} "
+        "of nominally obtainable service after events"
+    )
     axis.grid(alpha=0.3)
 
     if reached_mask.any():
@@ -656,6 +905,14 @@ def main():
         .clip(upper=1.0)
     )
 
+    # Calculate one threshold-response time for each run and event episode.
+    event_response_df = build_event_response_summary(
+        data=results_df,
+        comparison_parameters=COMPARISON_PARAMETERS,
+        event_markers=event_markers,
+        threshold=COVERAGE_THRESHOLD,
+    )
+
     # Find the first simulated time at which each run reaches the threshold.
     threshold_reached_rows = results_df[results_df["capacity_adjusted_coverage"] >= COVERAGE_THRESHOLD]
 
@@ -727,6 +984,41 @@ def main():
     run_summary_df["time_to_90_percent_nominal_service_s"] = (
         run_summary_df["RunId"]
         .map(first_threshold_time_by_run_s)
+    )
+
+    # Summarize event responses within each independent run.
+    event_response_by_run_df = (
+        event_response_df
+        .groupby("RunId", as_index=False)
+        .agg(
+            event_episodes=("event_index", "size"),
+            event_episodes_reaching_90_percent_nominal_service=(
+                "time_to_90_percent_nominal_service_after_event_s",
+                "count",
+            ),
+            mean_time_to_90_percent_nominal_service_after_event_s=(
+                "time_to_90_percent_nominal_service_after_event_s",
+                "mean",
+            ),
+        )
+    )
+
+    run_summary_df = run_summary_df.merge(
+        event_response_by_run_df,
+        on="RunId",
+        how="left",
+        validate="one_to_one",
+    )
+
+    event_count_columns = [
+        "event_episodes",
+        "event_episodes_reaching_90_percent_nominal_service",
+    ]
+
+    run_summary_df[event_count_columns] = (
+        run_summary_df[event_count_columns]
+        .fillna(0)
+        .astype(int)
     )
 
     # Calculate r_delta(t) separately within each replication.
@@ -814,6 +1106,23 @@ def main():
             runs_reaching_90_percent_nominal_service=("time_to_90_percent_nominal_service_s", "count"),
             time_to_90_percent_nominal_service_mean_s=("time_to_90_percent_nominal_service_s", "mean"),
             time_to_90_percent_nominal_service_std_s=("time_to_90_percent_nominal_service_s", "std"),
+            event_episode_cases=("event_episodes", "sum"),
+            event_episode_cases_reaching_90_percent_nominal_service=(
+                "event_episodes_reaching_90_percent_nominal_service",
+                "sum",
+            ),
+            runs_contributing_to_event_response_mean=(
+                "mean_time_to_90_percent_nominal_service_after_event_s",
+                "count",
+            ),
+            mean_event_response_time_mean_s=(
+                "mean_time_to_90_percent_nominal_service_after_event_s",
+                "mean",
+            ),
+            mean_event_response_time_std_s=(
+                "mean_time_to_90_percent_nominal_service_after_event_s",
+                "std",
+            ),
             final_residual_deficit_mean=("final_residual_deficit", "mean"),
             final_residual_deficit_std=("final_residual_deficit", "std"),
             final_normalized_deficit_mean=("final_normalized_deficit", "mean"),
@@ -829,12 +1138,11 @@ def main():
 
     # Save one compact summary row for each model execution.
     SUMMARY_DIRECTORY.mkdir(parents=True, exist_ok=True)
+
     run_summary_df.to_csv(SUMMARY_PATH, index=False)
-    
     aggregate_summary_df.to_csv(AGGREGATE_PATH, index=False)
-
     time_series_summary_df.to_csv(TIME_SERIES_PATH, index=False)
-
+    event_response_df.to_csv(EVENT_RESPONSE_PATH, index=False)
 
     save_time_series_plot(
         data=time_series_summary_df,
@@ -911,6 +1219,13 @@ def main():
             output_path=TIME_TO_90_PERCENT_FIGURE_PATH,
         )
 
+        if not event_response_df.empty:
+            save_event_response_comparison_plot(
+                data=aggregate_summary_df,
+                comparison_parameters=COMPARISON_PARAMETERS,
+                output_path=EVENT_RESPONSE_FIGURE_PATH,
+            )
+
     print()
     print("Summary by run:")
     print(run_summary_df)
@@ -927,6 +1242,11 @@ def main():
     print(f"Time-series summary saved to: {TIME_SERIES_PATH}")
 
     print()
+    print("Event-response summary:")
+    print(event_response_df)
+    print(f"Event-response summary saved to: {EVENT_RESPONSE_PATH}")
+
+    print()
     print(f"Deficit figure saved to: {DEFICIT_FIGURE_PATH}")
     print(f"Capacity-adjusted coverage figure saved to: "f"{CAPACITY_ADJUSTED_COVERAGE_FIGURE_PATH}")
     print(f"Deficit-reduction figure saved to: "f"{R_DELTA_FIGURE_PATH}")
@@ -936,6 +1256,8 @@ def main():
     if len(COMPARISON_PARAMETERS) == 1:
         print("J_delta comparison figure saved to: "f"{J_DELTA_COMPARISON_FIGURE_PATH}")
         print(f"Time-to-threshold comparison figure saved to: "f"{TIME_TO_90_PERCENT_FIGURE_PATH}")
+        if not event_response_df.empty:
+            print("Event-response figure saved to: "f"{EVENT_RESPONSE_FIGURE_PATH}")
 
 if __name__ == "__main__":
     main()
