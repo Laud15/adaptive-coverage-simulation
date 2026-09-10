@@ -327,21 +327,23 @@ deficit_plot = make_plot_component(
     post_process=resize_plot
 )
 
-# Second: the two types of inactive drone. 
-# The GAP between the two curves is diagnostic: it represents drones that selected a point but are not stationing there.
+# Second: selected fleet-state indicators.
+# Exploring drones are a subset of idle drones, so these series do not form a partition.
 drone_plot = make_plot_component(
     {
         "idle_drones": "tab:gray",
-        "exploring_drones": "tab:purple"
+        "exploring_drones": "tab:purple",
+        "stationing_drones": "tab:green",
     },
     post_process=resize_plot
 )
 
-# Third: the two failure modes, points left behind and wasted drones.
+# Third: the three mutually exclusive point service states.
 point_plot = make_plot_component(
     {
-        "satisfied_points": "tab:green",
-        "overservice": "tab:orange"
+        "underserved_points": "tab:red",
+        "exactly_satisfied_points": "tab:green",
+        "overserved_points": "tab:orange",
     },
     post_process=resize_plot
 )

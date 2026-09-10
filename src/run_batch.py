@@ -97,12 +97,23 @@ def main():
         "RunId",
         "Step",
         "seed",
+        "n_drones",
         "meters_per_unit",
         "seconds_per_step",
         "speed",
         "simulated_time_s",
         "residual_deficit",
         "normalized_deficit",
+        "underserved_points",
+        "exactly_satisfied_points",
+        "overserved_points",
+        "idle_drones",
+        "exploring_drones",
+        "stationing_drones",
+        "active_points",
+        "overlapping_zones",
+        "total_demand",
+        "unavoidable_deficit",
     }
 
     missing_columns = required_columns - set(results_df.columns)
@@ -152,7 +163,9 @@ def main():
         "simulated_time_s",
         "residual_deficit",
         "normalized_deficit",
-        "satisfied_points",
+        "underserved_points",
+        "exactly_satisfied_points",
+        "overserved_points",
     ]
 
     print(f"Collected rows: {len(results_df)}")

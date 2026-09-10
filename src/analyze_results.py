@@ -8,6 +8,8 @@ EXPERIMENT_NAME = "coverage_radius_static_pilot"
 
 # Model parameters whose values distinguish the configurations being compared.
 COMPARISON_PARAMETERS = ["coverage_radius"]
+# Fraction of nominally obtainable service required by the response-time metric.
+COVERAGE_THRESHOLD = 0.90
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXPERIMENT_DIRECTORY = PROJECT_ROOT / "results" / EXPERIMENT_NAME
@@ -22,10 +24,12 @@ TIME_SERIES_PATH = SUMMARY_DIRECTORY / "time_series_summary.csv"
 FIGURES_DIRECTORY = EXPERIMENT_DIRECTORY / "figures"
 DEFICIT_FIGURE_PATH = FIGURES_DIRECTORY / "normalized_deficit.png"
 R_DELTA_FIGURE_PATH = FIGURES_DIRECTORY / "deficit_reduction.png"
-SATISFIED_FRACTION_FIGURE_PATH = FIGURES_DIRECTORY / "satisfied_fraction.png"
-OVERSERVICE_FIGURE_PATH = FIGURES_DIRECTORY / "overservice.png"
 FLEET_STATE_FIGURE_PATH = FIGURES_DIRECTORY / "fleet_state.png"
 J_DELTA_COMPARISON_FIGURE_PATH = FIGURES_DIRECTORY / "j_delta_comparison.png"
+POINT_STATE_FIGURE_PATH = FIGURES_DIRECTORY / "point_service_state.png"
+CAPACITY_ADJUSTED_COVERAGE_FIGURE_PATH = (FIGURES_DIRECTORY / "capacity_adjusted_coverage.png")
+TIME_TO_90_PERCENT_FIGURE_PATH = (FIGURES_DIRECTORY / "time_to_90_percent_nominal_service.png")
+SCENARIO_CHARACTERISTICS_FIGURE_PATH = (FIGURES_DIRECTORY / "scenario_characteristics.png")
 
 def get_configuration_groups(data, comparison_parameters):
     """Return one labeled data subset for each configuration."""
@@ -60,7 +64,6 @@ def get_configuration_groups(data, comparison_parameters):
     return configuration_groups
 
 
-
 def save_time_series_plot(
     data,
     comparison_parameters,
@@ -71,7 +74,9 @@ def save_time_series_plot(
     y_label,
     y_limits=None,
     reference_y=None,
-    reference_label=None
+    reference_label=None,
+    reference_series_column=None,
+    reference_series_label=None,
 ):
     """Save a time-series mean with a one-standard-deviation band."""
     figure, axis = plt.subplots(figsize=(8, 5))
@@ -105,7 +110,22 @@ def save_time_series_plot(
             label=band_label,
         )
 
-    axis.set_xlabel("Simulated time (s)")
+        if reference_series_column is not None:
+            if comparison_parameters:
+                reference_curve_label = (f"{configuration_label}: {reference_series_label}")
+            else:
+                reference_curve_label = reference_series_label
+
+            axis.plot(
+                time_s,
+                configuration_df[reference_series_column],
+                color=line.get_color(),
+                linestyle="--",
+                linewidth=1.2,
+                label=reference_curve_label,
+            )
+
+    axis.set_xlabel("Simulated time (s; 1 step = 1 s)")
     all_time_s = data["simulated_time_s"]
     axis.set_xlim(all_time_s.min(), all_time_s.max())
     axis.set_ylabel(y_label)
@@ -181,6 +201,83 @@ def save_j_delta_comparison_plot(
     plt.close(figure)
 
 
+def save_time_to_90_percent_comparison_plot(
+    data,
+    comparison_parameters,
+    output_path,
+):
+    """Save threshold-time statistics for each compared configuration."""
+    if len(comparison_parameters) != 1:
+        raise ValueError(
+            "The threshold-time comparison plot requires exactly "
+            "one comparison parameter."
+        )
+
+    parameter = comparison_parameters[0]
+    plot_data = data.sort_values(parameter).reset_index(drop=True)
+
+    mean_values = plot_data["time_to_90_percent_nominal_service_mean_s"]
+    std_values = plot_data["time_to_90_percent_nominal_service_std_s"].fillna(0.0)
+
+    reached_mask = mean_values.notna()
+
+    figure, axis = plt.subplots(figsize=(8, 5))
+
+    if reached_mask.any():
+        reached_positions = plot_data.index[reached_mask]
+
+        axis.errorbar(
+            reached_positions,
+            mean_values[reached_mask],
+            yerr=std_values[reached_mask],
+            fmt="o",
+            capsize=4,
+            label="Mean ± 1 standard deviation",
+        )
+
+    for position, row in plot_data.iterrows():
+        reached_runs = int(row["runs_reaching_90_percent_nominal_service"])
+        total_runs = int(row["replications"])
+        reached_label = f"{reached_runs}/{total_runs} reached"
+
+        mean_time_s = row["time_to_90_percent_nominal_service_mean_s"]
+
+        if pd.notna(mean_time_s):
+            axis.annotate(
+                reached_label,
+                xy=(position, mean_time_s),
+                xytext=(0, 10),
+                textcoords="offset points",
+                ha="center",
+            )
+        else:
+            axis.text(
+                position,
+                0.03,
+                reached_label,
+                transform=axis.get_xaxis_transform(),
+                ha="center",
+                va="bottom",
+            )
+    
+    axis.set_xticks(plot_data.index)
+    axis.set_xticklabels(plot_data[parameter].astype(str))
+    axis.set_xlabel(parameter)
+    axis.set_ylabel("Mean threshold time among reached runs (s)")
+    axis.margins(y=0.15)
+    axis.set_ylim(bottom=0.0)
+    axis.set_title(f"Time to {COVERAGE_THRESHOLD:.0%} of nominally obtainable service")
+    axis.grid(alpha=0.3)
+
+    if reached_mask.any():
+        axis.legend()
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    figure.tight_layout()
+    figure.savefig(output_path, dpi=200)
+    plt.close(figure)
+
 
 def save_fleet_state_plot(
     data,
@@ -189,9 +286,9 @@ def save_fleet_state_plot(
 ):
     """Save fleet-state time series for each configuration."""
     figure, axes = plt.subplots(
-        nrows=2,
+        nrows=3,
         ncols=1,
-        figsize=(8, 8),
+        figsize=(8, 10),
         sharex=True,
         sharey=True
     )
@@ -206,7 +303,12 @@ def save_fleet_state_plot(
             "exploring_drones_mean",
             "exploring_drones_std",
             "Exploring drones",
-        )
+        ),
+        (
+            "stationing_drones_mean",
+            "stationing_drones_std",
+            "Stationing drones",
+        ),
     )
 
     configuration_groups = get_configuration_groups(
@@ -214,11 +316,7 @@ def save_fleet_state_plot(
         comparison_parameters
     )
 
-    for axis, (
-        mean_column,
-        std_column,
-        state_label
-    ) in zip(axes, series):
+    for axis, (mean_column, std_column, state_label) in zip(axes, series):
         for configuration_label, configuration_df in configuration_groups:
             time_s = configuration_df["simulated_time_s"]
             mean_values = configuration_df[mean_column]
@@ -253,9 +351,204 @@ def save_fleet_state_plot(
 
     all_time_s = data["simulated_time_s"]
     axes[-1].set_xlim(all_time_s.min(), all_time_s.max())
-    axes[-1].set_xlabel("Simulated time (s)")
+    axes[-1].set_xlabel("Simulated time (s; 1 step = 1 s)")
 
     figure.suptitle("Fleet state over time")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    figure.tight_layout()
+    figure.savefig(output_path, dpi=200)
+    plt.close(figure)
+
+
+def save_point_state_plot(
+    data,
+    comparison_parameters,
+    output_path
+):
+    """Save point-service-state time series for each configuration."""
+    figure, axes = plt.subplots(
+        nrows=3,
+        ncols=1,
+        figsize=(8, 10),
+        sharex=True,
+        sharey=True
+    )
+
+    series = (
+        (
+            "underserved_points_mean",
+            "underserved_points_std",
+            "Underserved points",
+        ),
+        (
+            "exactly_satisfied_points_mean",
+            "exactly_satisfied_points_std",
+            "Exactly satisfied points",
+        ),
+        (
+            "overserved_points_mean",
+            "overserved_points_std",
+            "Overserved points",
+        ),
+    )
+
+    configuration_groups = get_configuration_groups(data, comparison_parameters)
+
+    for axis, (mean_column, std_column, state_label) in zip(axes, series):
+        for configuration_label, configuration_df in configuration_groups:
+            time_s = configuration_df["simulated_time_s"]
+            mean_values = configuration_df[mean_column]
+            std_values = configuration_df[std_column].fillna(0.0)
+
+            if comparison_parameters:
+                line_label = (
+                    f"{configuration_label} (mean ± 1 SD)"
+                )
+            else:
+                line_label = "Mean ± 1 standard deviation"
+
+            line = axis.plot(
+                time_s,
+                mean_values,
+                label=line_label
+            )[0]
+
+            axis.fill_between(
+                time_s,
+                mean_values - std_values,
+                mean_values + std_values,
+                color=line.get_color(),
+                alpha=0.15
+            )
+
+            if comparison_parameters:
+                active_points_label = (f"{configuration_label}: active points")
+            else:
+                active_points_label = "Active points"
+
+            axis.plot(
+                time_s,
+                configuration_df["active_points_mean"],
+                color=line.get_color(),
+                linestyle="--",
+                linewidth=1.2,
+                label=active_points_label,
+            )
+
+        axis.set_ylabel("Number of points")
+        axis.set_ylim(bottom=0.0)
+        axis.set_title(state_label)
+        axis.grid(alpha=0.3)
+        axis.legend()
+
+    all_time_s = data["simulated_time_s"]
+    axes[-1].set_xlim(all_time_s.min(), all_time_s.max())
+    axes[-1].set_xlabel("Simulated time (s; 1 step = 1 s)")
+
+    figure.suptitle("Point service state over time")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    figure.tight_layout()
+    figure.savefig(output_path, dpi=200)
+    plt.close(figure)
+
+def save_scenario_characteristics_plot(
+    data,
+    comparison_parameters,
+    output_path,
+):
+    """Save time-series plots of scenario characteristics."""
+    figure, axes = plt.subplots(
+        nrows=5,
+        ncols=1,
+        figsize=(8, 15),
+        sharex=True,
+    )
+
+    series = (
+        (
+            "active_points_mean",
+            "active_points_std",
+            "Active points",
+            "Number of points",
+        ),
+        (
+            "total_demand_mean",
+            "total_demand_std",
+            "Total demand",
+            "Demand units",
+        ),
+        (
+            "mean_demand_per_point_mean",
+            "mean_demand_per_point_std",
+            "Mean demand per point",
+            "Demand units per point",
+        ),
+        (
+            "fleet_load_mean",
+            "fleet_load_std",
+            "Fleet load",
+            "Demand units per drone",
+        ),
+        (
+            "overlapping_zones_mean",
+            "overlapping_zones_std",
+            "Overlapping coverage-zone pairs",
+            "Number of point pairs",
+        ),
+    )
+
+    configuration_groups = get_configuration_groups(
+        data,
+        comparison_parameters,
+    )
+
+    for axis, (
+        mean_column,
+        std_column,
+        panel_title,
+        y_label,
+    ) in zip(axes, series):
+        for configuration_label, configuration_df in configuration_groups:
+            time_s = configuration_df["simulated_time_s"]
+            mean_values = configuration_df[mean_column]
+            std_values = configuration_df[std_column].fillna(0.0)
+
+            if comparison_parameters:
+                line_label = (
+                    f"{configuration_label} (mean ± 1 SD)"
+                )
+            else:
+                line_label = "Mean ± 1 standard deviation"
+
+            line = axis.plot(
+                time_s,
+                mean_values,
+                label=line_label,
+            )[0]
+
+            axis.fill_between(
+                time_s,
+                mean_values - std_values,
+                mean_values + std_values,
+                color=line.get_color(),
+                alpha=0.15,
+            )
+
+        axis.set_ylabel(y_label)
+        axis.set_ylim(bottom=0.0)
+        axis.set_title(panel_title)
+        axis.grid(alpha=0.3)
+        axis.legend()
+
+    all_time_s = data["simulated_time_s"]
+    axes[-1].set_xlim(all_time_s.min(), all_time_s.max())
+    axes[-1].set_xlabel("Simulated time (s; 1 step = 1 s)")
+
+    figure.suptitle("Scenario characteristics over time")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -278,6 +571,44 @@ def main():
     if missing_comparison_parameters:
         raise ValueError("Comparison parameters are missing from the batch results: "f"{sorted(missing_comparison_parameters)}")
 
+    # Derive metrics that do not require additional model reporters.
+    useful_service = (results_df["total_demand"] - results_df["residual_deficit"])
+
+    nominal_service_capacity = (results_df[["total_demand", "n_drones"]].min(axis=1))
+
+    results_df["capacity_adjusted_coverage"] = (
+        useful_service
+        .div(nominal_service_capacity)
+        .where(nominal_service_capacity > 0, 1.0)
+        .clip(upper=1.0)
+    )
+
+    # Find the first simulated time at which each run reaches the threshold.
+    threshold_reached_rows = results_df[results_df["capacity_adjusted_coverage"] >= COVERAGE_THRESHOLD]
+
+    first_threshold_time_by_run_s = (
+        threshold_reached_rows
+        .groupby("RunId")["simulated_time_s"]
+        .min()
+    )
+
+    results_df["mean_demand_per_point"] = (
+        results_df["total_demand"]
+        .div(results_df["active_points"])
+        .where(results_df["active_points"] > 0)
+    )
+
+    results_df["fleet_load"] = (
+        results_df["total_demand"]
+        .div(results_df["n_drones"])
+    )
+
+    results_df["normalized_unavoidable_deficit"] = (
+        results_df["unavoidable_deficit"]
+        .div(results_df["total_demand"])
+        .where(results_df["total_demand"] > 0, 0.0)
+    )
+
     columns_to_show = [
         "RunId",
         "Step",
@@ -285,7 +616,10 @@ def main():
         "simulated_time_s",
         "residual_deficit",
         "normalized_deficit",
-        "satisfied_points",
+        "capacity_adjusted_coverage",
+        "underserved_points",
+        "exactly_satisfied_points",
+        "overserved_points"
     ]
 
     print(f"Loaded rows: {len(results_df)}")
@@ -313,23 +647,15 @@ def main():
             J_delta=("normalized_deficit", "mean"),
             final_time_s=("simulated_time_s", "last"),
             final_residual_deficit=("residual_deficit", "last"),
-            final_normalized_deficit=("normalized_deficit", "last"),
-            final_satisfied_points=("satisfied_points", "last"),
-            final_active_points=("active_points", "last"),
-            final_overservice=("overservice", "last"),
+            final_normalized_deficit=("normalized_deficit", "last")
         )
     )
 
-    # Normalize the number of satisfied points because dynamic runs may have different number of active points.
-    active_points = run_summary_df["final_active_points"]
-
-    run_summary_df["final_satisfied_fraction"] = (
-        run_summary_df["final_satisfied_points"]
-        .div(active_points)
-        .where(active_points > 0)
+    run_summary_df["time_to_90_percent_nominal_service_s"] = (
+        run_summary_df["RunId"]
+        .map(first_threshold_time_by_run_s)
     )
 
-    
     # Calculate r_delta(t) separately within each replication.
     results_df = results_df.sort_values(["RunId", "Step"]).copy()
 
@@ -340,16 +666,6 @@ def main():
     )
 
     results_df["r_delta"] = (previous_normalized_deficit - results_df["normalized_deficit"])
-
-    # Normalize satisfied points at every step because the number of active
-    # points may change during dynamic scenarios.
-    active_points_by_step = results_df["active_points"]
-
-    results_df["satisfied_fraction"] = (
-        results_df["satisfied_points"]
-        .div(active_points_by_step)
-        .where(active_points_by_step > 0)
-    )
 
     # Average each step only across replications of the same configuration.
     time_series_group_columns = COMPARISON_PARAMETERS + ["Step"]
@@ -362,26 +678,42 @@ def main():
         .agg(
             simulated_time_s=("simulated_time_s", "first"),
             replications=("RunId", "nunique"),
-            normalized_deficit_mean=("normalized_deficit", "mean"),
-            normalized_deficit_std=("normalized_deficit", "std"),
-            r_delta_mean=("r_delta", "mean"),
-            r_delta_std=("r_delta", "std"),
-            satisfied_fraction_mean=("satisfied_fraction", "mean"),
-            satisfied_fraction_std=("satisfied_fraction", "std"),
+
             residual_deficit_mean=("residual_deficit", "mean"),
             residual_deficit_std=("residual_deficit", "std"),
-            overservice_mean=("overservice", "mean"),
-            overservice_std=("overservice", "std"),
+            normalized_deficit_mean=("normalized_deficit", "mean"),
+            normalized_deficit_std=("normalized_deficit", "std"),
+            capacity_adjusted_coverage_mean=("capacity_adjusted_coverage", "mean"),
+            capacity_adjusted_coverage_std=("capacity_adjusted_coverage", "std"),
+            normalized_unavoidable_deficit_mean=("normalized_unavoidable_deficit", "mean"),
+            normalized_unavoidable_deficit_std=("normalized_unavoidable_deficit", "std"),
+            r_delta_mean=("r_delta", "mean"),
+            r_delta_std=("r_delta", "std"),
+
+            underserved_points_mean=("underserved_points", "mean"),
+            underserved_points_std=("underserved_points", "std"),
+            exactly_satisfied_points_mean=("exactly_satisfied_points", "mean"),
+            exactly_satisfied_points_std=("exactly_satisfied_points", "std"),
+            overserved_points_mean=("overserved_points", "mean"),
+            overserved_points_std=("overserved_points", "std"),
+
             idle_drones_mean=("idle_drones", "mean"),
             idle_drones_std=("idle_drones", "std"),
             exploring_drones_mean=("exploring_drones", "mean"),
             exploring_drones_std=("exploring_drones", "std"),
+            stationing_drones_mean=("stationing_drones", "mean"),
+            stationing_drones_std=("stationing_drones", "std"),
+
             active_points_mean=("active_points", "mean"),
             active_points_std=("active_points", "std"),
             total_demand_mean=("total_demand", "mean"),
             total_demand_std=("total_demand", "std"),
-            unavoidable_deficit_mean=("unavoidable_deficit", "mean"),
-            unavoidable_deficit_std=("unavoidable_deficit", "std")
+            mean_demand_per_point_mean=("mean_demand_per_point", "mean"),
+            mean_demand_per_point_std=("mean_demand_per_point", "std"),
+            fleet_load_mean=("fleet_load", "mean"),
+            fleet_load_std=("fleet_load", "std"),
+            overlapping_zones_mean=("overlapping_zones", "mean"),
+            overlapping_zones_std=("overlapping_zones", "std")
         )
     )
 
@@ -406,32 +738,13 @@ def main():
             replications=("RunId", "nunique"),
             J_delta_mean=("J_delta", "mean"),
             J_delta_std=("J_delta", "std"),
-            final_residual_deficit_mean=(
-                "final_residual_deficit",
-                "mean",
-            ),
-            final_residual_deficit_std=(
-                "final_residual_deficit",
-                "std",
-            ),
-            final_normalized_deficit_mean=(
-                "final_normalized_deficit",
-                "mean",
-            ),
-            final_normalized_deficit_std=(
-                "final_normalized_deficit",
-                "std",
-            ),
-            final_satisfied_fraction_mean=(
-                "final_satisfied_fraction",
-                "mean",
-            ),
-            final_satisfied_fraction_std=(
-                "final_satisfied_fraction",
-                "std",
-            ),
-            final_overservice_mean=("final_overservice", "mean"),
-            final_overservice_std=("final_overservice", "std"),
+            runs_reaching_90_percent_nominal_service=("time_to_90_percent_nominal_service_s", "count"),
+            time_to_90_percent_nominal_service_mean_s=("time_to_90_percent_nominal_service_s", "mean"),
+            time_to_90_percent_nominal_service_std_s=("time_to_90_percent_nominal_service_s", "std"),
+            final_residual_deficit_mean=("final_residual_deficit", "mean"),
+            final_residual_deficit_std=("final_residual_deficit", "std"),
+            final_normalized_deficit_mean=("final_normalized_deficit", "mean"),
+            final_normalized_deficit_std=("final_normalized_deficit", "std"),
         )
     )
 
@@ -458,7 +771,22 @@ def main():
         output_path=DEFICIT_FIGURE_PATH,
         title="Normalized deficit over time",
         y_label="Fraction of total demand unmet",
-        y_limits=(0.0, 1.05)
+        y_limits=(0.0, 1.05),
+        reference_series_column="normalized_unavoidable_deficit_mean",
+        reference_series_label="Mean conditional structural reference",
+    )
+
+    save_time_series_plot(
+        data=time_series_summary_df,
+        comparison_parameters=COMPARISON_PARAMETERS,
+        mean_column="capacity_adjusted_coverage_mean",
+        std_column="capacity_adjusted_coverage_std",
+        output_path=CAPACITY_ADJUSTED_COVERAGE_FIGURE_PATH,
+        title="Capacity-adjusted coverage over time",
+        y_label="Fraction of nominally obtainable service",
+        y_limits=(0.0, 1.05),
+        reference_y=COVERAGE_THRESHOLD,
+        reference_label=f"{COVERAGE_THRESHOLD:.0%} threshold",
     )
 
     save_time_series_plot(
@@ -473,27 +801,10 @@ def main():
         reference_label="No change"
     )
 
-    save_time_series_plot(
+    save_point_state_plot(
         data=time_series_summary_df,
         comparison_parameters=COMPARISON_PARAMETERS,
-        mean_column="satisfied_fraction_mean",
-        std_column="satisfied_fraction_std",
-        output_path=SATISFIED_FRACTION_FIGURE_PATH,
-        title="Fraction of satisfied points over time",
-        y_label="Fraction of active points satisfied",
-        y_limits=(-0.05, 1.05)
-    )
-
-    save_time_series_plot(
-        data=time_series_summary_df,
-        comparison_parameters=COMPARISON_PARAMETERS,
-        mean_column="overservice_mean",
-        std_column="overservice_std",
-        output_path=OVERSERVICE_FIGURE_PATH,
-        title="Total overservice over time",
-        y_label="Excess occupancy units across active points",
-        reference_y=0.0,
-        reference_label="No overservice"
+        output_path=POINT_STATE_FIGURE_PATH,
     )
 
     save_fleet_state_plot(
@@ -502,11 +813,23 @@ def main():
         output_path=FLEET_STATE_FIGURE_PATH,
     )
 
+    save_scenario_characteristics_plot(
+        data=time_series_summary_df,
+        comparison_parameters=COMPARISON_PARAMETERS,
+        output_path=SCENARIO_CHARACTERISTICS_FIGURE_PATH,
+    )
+
     if len(COMPARISON_PARAMETERS) == 1:
         save_j_delta_comparison_plot(
             data=aggregate_summary_df,
             comparison_parameters=COMPARISON_PARAMETERS,
             output_path=J_DELTA_COMPARISON_FIGURE_PATH,
+        )
+
+        save_time_to_90_percent_comparison_plot(
+            data=aggregate_summary_df,
+            comparison_parameters=COMPARISON_PARAMETERS,
+            output_path=TIME_TO_90_PERCENT_FIGURE_PATH,
         )
 
     print()
@@ -526,12 +849,14 @@ def main():
 
     print()
     print(f"Deficit figure saved to: {DEFICIT_FIGURE_PATH}")
+    print(f"Capacity-adjusted coverage figure saved to: "f"{CAPACITY_ADJUSTED_COVERAGE_FIGURE_PATH}")
     print(f"Deficit-reduction figure saved to: "f"{R_DELTA_FIGURE_PATH}")
-    print(f"Satisfied-points figure saved to: "f"{SATISFIED_FRACTION_FIGURE_PATH}")
-    print(f"Overservice figure saved to: {OVERSERVICE_FIGURE_PATH}")
     print(f"Fleet-state figure saved to: {FLEET_STATE_FIGURE_PATH}")
+    print(f"Point-service-state figure saved to: {POINT_STATE_FIGURE_PATH}")
+    print(f"Scenario characteristics figure saved to: "f"{SCENARIO_CHARACTERISTICS_FIGURE_PATH}")
     if len(COMPARISON_PARAMETERS) == 1:
         print("J_delta comparison figure saved to: "f"{J_DELTA_COMPARISON_FIGURE_PATH}")
+        print(f"Time-to-threshold comparison figure saved to: "f"{TIME_TO_90_PERCENT_FIGURE_PATH}")
 
 if __name__ == "__main__":
     main()

@@ -496,6 +496,9 @@ instead passed programmatically by a scenario or experiment.
 | `event_seed` | Independent seed used to generate positions and quotas required by a point routine |
 | `drone_type` | `quadcopter` or preliminary `fixed_wing` platform |
 | `deployment` | Initial drone deployment pattern |
+| `speed` | Distance traveled per simulation step; with the adopted experimental scale, `speed=1` corresponds to 1 m/s |
+| `meters_per_unit` | Conversion factor from one spatial unit to meters |
+| `seconds_per_step` | Conversion factor from one simulation step to seconds |
 | `point_sensing_radius` | Distance within which points are perceived |
 | `drone_sensing_radius` | Distance within which drones are perceived and communicate |
 | `coverage_radius` | Distance from a point within which stationing is possible |
@@ -510,6 +513,10 @@ instead passed programmatically by a scenario or experiment.
 | `release_delay_max_steps` | Maximum random overcrowding delay used only by the preliminary fixed-wing policy |
 
 `separation` and `separate` are intentionally distinct: the first is a distance, while the second is a force coefficient.
+
+The current experimental protocol adopts `meters_per_unit=1`,
+`seconds_per_step=1`, and `speed=1`. Therefore one spatial unit is one meter,
+one simulation step is one second, and the nominal drone speed is 1 m/s.
 
 ## Batch experiments and result analysis
 
@@ -564,11 +571,13 @@ results/
     |   `-- time_series_summary.csv
     `-- figures/
         |-- normalized_deficit.png
+        |-- capacity_adjusted_coverage.png
         |-- deficit_reduction.png
-        |-- satisfied_fraction.png
-        |-- overservice.png
+        |-- point_service_state.png
         |-- fleet_state.png
-        `-- j_delta_comparison.png
+        |-- scenario_characteristics.png
+        |-- j_delta_comparison.png
+        `-- time_to_90_percent_nominal_service.png
 ```
 
 The generated files have distinct roles:
@@ -577,9 +586,12 @@ The generated files have distinct roles:
   period, process count, seeds, and model parameters;
 - `raw_results.csv` contains the observations collected for every run and
   simulation step;
-- `run_summary.csv` contains one summary row for each independent model run;
+- `run_summary.csv` contains one summary row for each independent model run,
+  including `J_delta` and the first time at which 90% of nominally obtainable
+  service is reached;
 - `aggregate_summary.csv` reports means and sample standard deviations across
-  replications of each parameter configuration;
+  replications of each parameter configuration, together with the number of
+  runs that reach the 90% threshold;
 - `time_series_summary.csv` reports step-by-step means and sample standard
   deviations for every configuration;
 - `figures/` contains the time-series and aggregate comparison plots generated
@@ -604,8 +616,10 @@ The interface can display:
 - `residual_deficit`: total number of missing drone assignments;
 - `idle_drones`: drones not currently covering any point;
 - `exploring_drones`: drones with no useful destination currently known;
-- `satisfied_points`: points whose occupancy reaches their priority;
-- `overservice`: excess drones assigned to already satisfied points;
+- `stationing_drones`: drones whose current role is `owner` or `support`;
+- `underserved_points`: points whose occupancy is below their priority;
+- `exactly_satisfied_points`: points whose occupancy equals their priority;
+- `overserved_points`: points whose occupancy exceeds their priority;
 - `active_points`: current number of active points;
 - `total_demand`: sum of the quotas of the currently active points.
 
@@ -613,9 +627,25 @@ The data collector additionally records:
 
 - `normalized_deficit`: residual deficit divided by the current total demand,
   or zero when no point is active;
+- `overlapping_zones`: number of pairs of coverage zones whose interiors
+  overlap;
 - `unavoidable_deficit`: `max(0, total_demand - n_drones)`, which is only a
   valid resource lower bound when each drone contributes to at most one point;
 - `simulated_time_s`: simulated physical time associated with the collected row.
+
+`src/analyze_results.py` derives `capacity_adjusted_coverage`, mean demand per
+point, fleet load, normalized structural deficit, normalized deficit reduction,
+`J_delta`, and the first time at which each run reaches 90% of nominally
+obtainable service. A run that never reaches the threshold retains a missing
+time value; aggregate output reports both the conditional mean among reached
+runs and the reached-run count.
+
+Every time-series figure uses simulated seconds on the horizontal axis and
+states that one step equals one second. Primary curves show the mean across
+replications with a mean +/- one sample standard deviation band. This band is
+not a confidence interval. The normalized-deficit figure also shows the
+conditional structural reference, while the capacity-adjusted-coverage figure
+shows the 90% threshold.
 
 The first row is collected at time zero before any event or movement. Later
 rows are collected after point events, drone decisions, movement, and the

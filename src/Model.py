@@ -512,17 +512,20 @@ class CoverageModel(mesa.Model):
         # Mesa invokes them at each collect, passing the model. Regular methods rather than lambdas for two reasons:
         #  1) they can be called manually from a test script,
         #  2) their name appears in a traceback instead of an anonymous "<lambda>."
-        # "total_demand" and "unavoidable_deficit" use the STRING form:
-        # Mesa reads the corresponding model attributes. 
-        # Both values are recomputed whenever the active points or their quotas change.
+        # Structural diagnostics use the STRING form:
+        # Mesa reads the corresponding model attributes.
+        # Their values are recomputed whenever the active points or their quotas change.
         model_reporters = {
             "residual_deficit": CoverageModel.residual_deficit,
             "normalized_deficit": CoverageModel.normalized_deficit,
-            "satisfied_points": CoverageModel.satisfied_points,
-            "overservice": CoverageModel.overservice,
+            "underserved_points": CoverageModel.underserved_points,
+            "exactly_satisfied_points": CoverageModel.exactly_satisfied_points,
+            "overserved_points": CoverageModel.overserved_points,
             "idle_drones": CoverageModel.idle_drones,
             "exploring_drones": CoverageModel.exploring_drones,
-            "active_points": CoverageModel.active_points, 
+            "stationing_drones": CoverageModel.stationing_drones,
+            "active_points": CoverageModel.active_points,
+            "overlapping_zones": "overlapping_zones",
             "total_demand": "total_demand",
             "unavoidable_deficit": "unavoidable_deficit",
             "simulated_time_s": "simulated_time_s",
@@ -816,32 +819,26 @@ class CoverageModel(mesa.Model):
             return 0.0
         return self.residual_deficit() / self.total_demand
 
-    def satisfied_points(self):
-        """Number of points that have reached (or exceeded) their quota.
+    def underserved_points(self):
+        """Return the number of active points below their required quota."""
+        return sum(
+            point.occupancy < point.priority
+            for point in self.target_agents
+        )
 
-        Looks at the same quantity as the deficit, but by POINT COUNT rather than amount:
-        it shows whether the system serves a few points well or many points halfway.
-        Two configurations with the same residual deficit can differ greatly here.
-        """
-        n = 0
-        for point in self.target_agents:
-            if point.occupancy >= point.priority:
-                n += 1
-        return n
+    def exactly_satisfied_points(self):
+        """Return the number of active points exactly at their required quota."""
+        return sum(
+            point.occupancy == point.priority
+            for point in self.target_agents
+        )
 
-    def overservice(self):
-        """Excess drones on points that are already fully served.
-
-        This is the other side of waste, and is NOT the complement of idle drones: an
-        idle drone stations at no point, while an over-serving drone stations at one
-        that was already satisfied. Different waste, different remedies.
-        """
-        total = 0.0
-        for point in self.target_agents:
-            excess = point.occupancy - point.priority
-            if excess > 0:
-                total += excess
-        return total
+    def overserved_points(self):
+        """Return the number of active points above their required quota."""
+        return sum(
+            point.occupancy > point.priority
+            for point in self.target_agents
+        )
 
     def idle_drones(self):
         """Drones that are not currently stationed at any point."""
@@ -865,6 +862,13 @@ class CoverageModel(mesa.Model):
             if drone.exploring:
                 n += 1
         return n
+
+    def stationing_drones(self):
+        """Return the number of quadcopters with a stationary role."""
+        return sum(
+            getattr(drone, "station_role", None) in ("owner", "support")
+            for drone in self.drone_agents
+        )
 
     def update_occupancy(self):
         """
