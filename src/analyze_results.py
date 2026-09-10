@@ -1,5 +1,6 @@
 """Analyze saved batch results without rerunning the simulation."""
 
+import json
 from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -15,6 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXPERIMENT_DIRECTORY = PROJECT_ROOT / "results" / EXPERIMENT_NAME
 
 INPUT_PATH = EXPERIMENT_DIRECTORY / "raw_results.csv"
+CONFIG_PATH = EXPERIMENT_DIRECTORY / "experiment_config.json"
 
 SUMMARY_DIRECTORY = EXPERIMENT_DIRECTORY / "summaries"
 SUMMARY_PATH = SUMMARY_DIRECTORY / "run_summary.csv"
@@ -30,6 +32,38 @@ POINT_STATE_FIGURE_PATH = FIGURES_DIRECTORY / "point_service_state.png"
 CAPACITY_ADJUSTED_COVERAGE_FIGURE_PATH = (FIGURES_DIRECTORY / "capacity_adjusted_coverage.png")
 TIME_TO_90_PERCENT_FIGURE_PATH = (FIGURES_DIRECTORY / "time_to_90_percent_nominal_service.png")
 SCENARIO_CHARACTERISTICS_FIGURE_PATH = (FIGURES_DIRECTORY / "scenario_characteristics.png")
+
+
+def load_event_markers(config_path):
+    """Load and validate the high-level event markers saved for an experiment."""
+    with config_path.open("r", encoding="utf-8") as config_file:
+        experiment_config = json.load(config_file)
+
+    event_markers = experiment_config.get("event_markers")
+
+    if not isinstance(event_markers, list):
+        raise ValueError(
+            "Experiment configuration does not contain a valid event_markers list."
+        )
+
+    required_fields = {"step", "simulated_time_s", "event_type"}
+
+    for marker in event_markers:
+        if not isinstance(marker, dict):
+            raise ValueError("Each event marker must be a dictionary.")
+
+        missing_fields = required_fields - set(marker)
+
+        if missing_fields:
+            raise ValueError(
+                f"Event marker is missing fields: {sorted(missing_fields)}"
+            )
+
+    return sorted(
+        event_markers,
+        key=lambda marker: marker["simulated_time_s"],
+    )
+
 
 def get_configuration_groups(data, comparison_parameters):
     """Return one labeled data subset for each configuration."""
@@ -63,6 +97,29 @@ def get_configuration_groups(data, comparison_parameters):
 
     return configuration_groups
 
+def add_event_markers(axis, event_markers):
+    """Draw one dashed vertical line for each environmental event time."""
+    events_by_time = {}
+
+    for marker in event_markers:
+        event_time_s = float(marker["simulated_time_s"])
+        event_type = str(marker["event_type"]).replace("_", " ").title()
+
+        events_by_time.setdefault(event_time_s, [])
+
+        if event_type not in events_by_time[event_time_s]:
+            events_by_time[event_time_s].append(event_type)
+
+    for event_time_s, event_types in sorted(events_by_time.items()):
+        event_label = ", ".join(event_types)
+
+        axis.axvline(
+            x=event_time_s,
+            color="black",
+            linestyle="--",
+            label=f"Event: {event_label} (t={event_time_s:g} s)",
+        )
+
 
 def save_time_series_plot(
     data,
@@ -77,6 +134,7 @@ def save_time_series_plot(
     reference_label=None,
     reference_series_column=None,
     reference_series_label=None,
+    event_markers=(),
 ):
     """Save a time-series mean with a one-standard-deviation band."""
     figure, axis = plt.subplots(figsize=(8, 5))
@@ -142,6 +200,8 @@ def save_time_series_plot(
             linewidth=1.0,
             label=reference_label,
         )
+
+    add_event_markers(axis, event_markers)
 
     axis.grid(alpha=0.3)
     axis.legend()
@@ -282,7 +342,8 @@ def save_time_to_90_percent_comparison_plot(
 def save_fleet_state_plot(
     data,
     comparison_parameters,
-    output_path
+    output_path,
+    event_markers=()
 ):
     """Save fleet-state time series for each configuration."""
     figure, axes = plt.subplots(
@@ -346,6 +407,7 @@ def save_fleet_state_plot(
         axis.set_ylabel("Number of drones")
         axis.set_ylim(bottom=0.0)
         axis.set_title(state_label)
+        add_event_markers(axis, event_markers)
         axis.grid(alpha=0.3)
         axis.legend()
 
@@ -365,7 +427,8 @@ def save_fleet_state_plot(
 def save_point_state_plot(
     data,
     comparison_parameters,
-    output_path
+    output_path,
+    event_markers=()
 ):
     """Save point-service-state time series for each configuration."""
     figure, axes = plt.subplots(
@@ -440,6 +503,7 @@ def save_point_state_plot(
         axis.set_ylabel("Number of points")
         axis.set_ylim(bottom=0.0)
         axis.set_title(state_label)
+        add_event_markers(axis, event_markers)
         axis.grid(alpha=0.3)
         axis.legend()
 
@@ -459,6 +523,7 @@ def save_scenario_characteristics_plot(
     data,
     comparison_parameters,
     output_path,
+    event_markers=()
 ):
     """Save time-series plots of scenario characteristics."""
     figure, axes = plt.subplots(
@@ -541,6 +606,7 @@ def save_scenario_characteristics_plot(
         axis.set_ylabel(y_label)
         axis.set_ylim(bottom=0.0)
         axis.set_title(panel_title)
+        add_event_markers(axis, event_markers)
         axis.grid(alpha=0.3)
         axis.legend()
 
@@ -562,6 +628,13 @@ def main():
 
     if not INPUT_PATH.exists():
         raise FileNotFoundError(f"Batch result file not found: {INPUT_PATH}")
+
+    if not CONFIG_PATH.exists():
+        raise FileNotFoundError(
+            f"Experiment configuration file not found: {CONFIG_PATH}"
+        )
+
+    event_markers = load_event_markers(CONFIG_PATH)
 
     results_df = pd.read_csv(INPUT_PATH)
 
@@ -774,6 +847,7 @@ def main():
         y_limits=(0.0, 1.05),
         reference_series_column="normalized_unavoidable_deficit_mean",
         reference_series_label="Mean conditional structural reference",
+        event_markers=event_markers
     )
 
     save_time_series_plot(
@@ -787,6 +861,7 @@ def main():
         y_limits=(0.0, 1.05),
         reference_y=COVERAGE_THRESHOLD,
         reference_label=f"{COVERAGE_THRESHOLD:.0%} threshold",
+        event_markers=event_markers,
     )
 
     save_time_series_plot(
@@ -798,25 +873,29 @@ def main():
         title="Normalized deficit reduction over time",
         y_label="Normalized deficit reduction per step",
         reference_y=0.0,
-        reference_label="No change"
+        reference_label="No change",
+        event_markers=event_markers
     )
 
     save_point_state_plot(
         data=time_series_summary_df,
         comparison_parameters=COMPARISON_PARAMETERS,
         output_path=POINT_STATE_FIGURE_PATH,
+        event_markers=event_markers,
     )
 
     save_fleet_state_plot(
         data=time_series_summary_df,
         comparison_parameters=COMPARISON_PARAMETERS,
         output_path=FLEET_STATE_FIGURE_PATH,
+        event_markers=event_markers
     )
 
     save_scenario_characteristics_plot(
         data=time_series_summary_df,
         comparison_parameters=COMPARISON_PARAMETERS,
         output_path=SCENARIO_CHARACTERISTICS_FIGURE_PATH,
+        event_markers=event_markers
     )
 
     if len(COMPARISON_PARAMETERS) == 1:

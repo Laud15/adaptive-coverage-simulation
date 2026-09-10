@@ -6,7 +6,7 @@ import pandas as pd
 from mesa.batchrunner import batch_run
 
 from Model import CoverageModel
-
+from PointScenario import get_point_routine
 
 def main():
     """Run a static coverage-radius pilot experiment."""
@@ -53,6 +53,20 @@ def main():
         "collect_agent_data": False,
     }
 
+    # Keep one high-level marker for each environmental event.
+    point_routine_definition = get_point_routine(parameters["point_routine"])
+
+    event_markers = [
+        {
+            "step": int(event["step"]),
+            "simulated_time_s": float(
+                event["step"] * parameters["seconds_per_step"]
+            ),
+            "event_type": event["type"],
+        }
+        for event in point_routine_definition
+    ]
+
     # Mesa creates one model execution for each configuration and seed.
     seeds = list(range(10))
 
@@ -64,6 +78,8 @@ def main():
         "number_processes": number_processes,
         "seeds": seeds,
         "parameters": parameters,
+        "point_routine_definition": point_routine_definition,
+        "event_markers": event_markers,
     }
 
     # Refuse to overwrite an experiment that has already been saved.

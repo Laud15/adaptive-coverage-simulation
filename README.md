@@ -583,7 +583,9 @@ results/
 The generated files have distinct roles:
 
 - `experiment_config.json` records the experiment name, duration, collection
-  period, process count, seeds, and model parameters;
+  period, process count, seeds, model parameters, the saved high-level point
+  routine definition, and compact event markers with step, simulated time, and
+  event type;
 - `raw_results.csv` contains the observations collected for every run and
   simulation step;
 - `run_summary.csv` contains one summary row for each independent model run,
@@ -595,7 +597,9 @@ The generated files have distinct roles:
 - `time_series_summary.csv` reports step-by-step means and sample standard
   deviations for every configuration;
 - `figures/` contains the time-series and aggregate comparison plots generated
-  from the saved tables.
+  from the saved tables. In dynamic experiments, every time-series plot marks
+  the saved environmental-event times with labeled dashed vertical lines;
+  static experiments contain no event lines.
 
 The complete `results/` directory is ignored by Git because experiment outputs
 can be large and are generated artifacts. Results required for analysis or for
