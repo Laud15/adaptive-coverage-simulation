@@ -58,6 +58,7 @@ def build_point_events(
     *,
     routine,
     initial_n_points,
+    initial_min_priority,
     initial_max_priority,
     study_x_min,
     study_x_max,
@@ -79,8 +80,15 @@ def build_point_events(
         raise TypeError("Point routine must be a list or tuple of events.")
 
     initial_n_points = _require_integer(initial_n_points, name="initial_n_points", minimum=0)
+    initial_min_priority = _require_integer(initial_min_priority, name="initial_min_priority", minimum=1)
     initial_max_priority = _require_integer(initial_max_priority, name="initial_max_priority", minimum=1)
     event_seed = _require_integer(event_seed, name="event_seed", minimum=0)
+
+    if initial_min_priority > initial_max_priority:
+        raise ValueError(
+            "initial_min_priority cannot be greater than "
+            "initial_max_priority."
+        )
 
     # This RNG is independent from the one used by the drone policy.
     event_rng = np.random.default_rng(event_seed)
@@ -89,8 +97,9 @@ def build_point_events(
     active_point_idxs = list(range(initial_n_points))
     next_point_idx = initial_n_points
 
-    # The initial model assigns quotas in the inclusive interval [1, initial_max_priority].
-    current_priority_min = 1
+    # Reconfigurations inherit the initial inclusive quota interval until a
+    # priority-range event changes it.
+    current_priority_min = initial_min_priority
     current_priority_max = initial_max_priority
 
     point_events = []

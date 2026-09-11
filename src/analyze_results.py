@@ -5,12 +5,90 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
-EXPERIMENT_NAME = "coverage_radius_static_pilot"
+EXPERIMENT_NAME = "static_deployment_comparison"
 
 # Model parameters whose values distinguish the configurations being compared.
-COMPARISON_PARAMETERS = ["coverage_radius"]
+COMPARISON_PARAMETERS = ["deployment"]
 # Fraction of nominally obtainable service required by the response-time metric.
 COVERAGE_THRESHOLD = 0.90
+
+# Italian labels used only in figures. Internal parameter and column names stay
+# unchanged so saved data and experiment configurations remain reproducible.
+PLOT_PARAMETER_LABELS = {
+    "width": "Larghezza dell'area di studio (m)",
+    "height": "Altezza dell'area di studio (m)",
+    "n_drones": "Numero di droni",
+    "n_points": "Numero iniziale di punti",
+    "min_priority": "Quota minima iniziale",
+    "max_priority": "Quota massima iniziale",
+    "point_margin": "Margine dei centri dei punti (m)",
+    "flight_buffer": "Buffer di volo (m)",
+    "point_layout": "Layout iniziale dei punti",
+    "point_routine": "Routine degli eventi dei punti",
+    "event_seed": "Seme degli eventi",
+    "deployment": "Dispiegamento iniziale dei droni",
+    "deployment_noise": "Dispersione del dispiegamento (m)",
+    "drone_type": "Tipo di drone",
+    "meters_per_unit": "Metri per unità spaziale (m/unità)",
+    "seconds_per_step": "Secondi per passo (s/passo)",
+    "speed": "Velocità (m/s)",
+    "drone_sensing_radius": (
+        "Raggio di percezione e comunicazione tra droni (m)"
+    ),
+    "point_sensing_radius": "Raggio di percezione dei punti (m)",
+    "separation": "Distanza di attivazione della separazione (m)",
+    "coverage_radius": "Raggio di copertura (m)",
+    "cohere": "Intensità dell'attrazione verso la destinazione",
+    "separate": "Coefficiente della forza di separazione",
+    "match": "Intensità dell'allineamento",
+    "boundary": "Coefficiente della forza di bordo",
+    "margin": "Distanza di attivazione della forza di bordo (m)",
+    "quadcopter_margin": "Margine di bordo dei quadricotteri (m)",
+    "beta": "Costo di viaggio",
+    "explore": "Deviazione standard dell'esplorazione (rad)",
+    "release_delay_max_steps": "Ritardo massimo di rilascio (passi)",
+    "avoid_angle_degrees": "Deviazione dalla stazione soddisfatta (°)",
+    "support_inset": "Rientro dei support dal bordo di copertura (m)",
+    "collect_agent_data": "Raccolta dei dati per agente",
+}
+
+PLOT_VALUE_LABELS = {
+    "random": "casuale",
+    "clusters": "a cluster",
+    "dispersed": "disperso",
+    "circle": "circolare",
+    "edges": "sui bordi",
+    "central": "centrale",
+    "base": "centrale",
+    "top": "dal bordo superiore",
+    "bottom": "dal bordo inferiore",
+    "left": "dal bordo sinistro",
+    "right": "dal bordo destro",
+    "quadcopter": "quadricottero",
+    "fixed_wing": "ala fissa",
+    "static": "statica",
+    "dynamic_demo": "dimostrazione dinamica",
+}
+
+EVENT_TYPE_LABELS = {
+    "reconfigure": "Riconfigurazione",
+    "change_priority_range": "Variazione delle quote",
+}
+
+MEAN_BAND_LABEL = "Media ± 1 deviazione standard"
+
+# Font sizes used consistently across all generated figures.
+plt.rcParams.update(
+    {
+        "font.size": 9,
+        "axes.titlesize": 10,
+        "axes.labelsize": 9,
+        "xtick.labelsize": 8,
+        "ytick.labelsize": 8,
+        "legend.fontsize": 8,
+        "figure.titlesize": 11,
+    }
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 EXPERIMENT_DIRECTORY = PROJECT_ROOT / "results" / EXPERIMENT_NAME
@@ -34,6 +112,36 @@ CAPACITY_ADJUSTED_COVERAGE_FIGURE_PATH = (FIGURES_DIRECTORY / "capacity_adjusted
 TIME_TO_90_PERCENT_FIGURE_PATH = (FIGURES_DIRECTORY / "time_to_90_percent_nominal_service.png")
 SCENARIO_CHARACTERISTICS_FIGURE_PATH = (FIGURES_DIRECTORY / "scenario_characteristics.png")
 EVENT_RESPONSE_FIGURE_PATH = (FIGURES_DIRECTORY / "event_response_time.png")
+
+
+def get_plot_parameter_label(parameter):
+    """Return the Italian label used for an experiment parameter in figures."""
+    return PLOT_PARAMETER_LABELS.get(parameter, parameter)
+
+def add_zero_baseline_margin(axis, fraction=0.05):
+    """Add a small margin below zero without hiding negative values."""
+    lower_limit, upper_limit = axis.get_ylim()
+    vertical_range = upper_limit - lower_limit
+    zero_margin = fraction * vertical_range
+
+    axis.set_ylim(
+        bottom=min(lower_limit, -zero_margin),
+        top=upper_limit,
+    )
+
+
+def get_plot_value_label(value):
+    """Return an Italian display label for a configuration value."""
+    if pd.isna(value):
+        return "automatico"
+
+    if isinstance(value, bool):
+        return "sì" if value else "no"
+
+    if isinstance(value, str):
+        return PLOT_VALUE_LABELS.get(value, value)
+
+    return f"{value:g}"
 
 
 def load_event_markers(config_path):
@@ -111,7 +219,7 @@ def build_event_episodes(event_markers):
 def get_configuration_groups(data, comparison_parameters):
     """Return one labeled data subset for each configuration."""
     if not comparison_parameters:
-        return [("Mean across replications", data)]
+        return [("Media tra le repliche", data)]
 
     if len(comparison_parameters) == 1:
         grouping_key = comparison_parameters[0]
@@ -131,7 +239,9 @@ def get_configuration_groups(data, comparison_parameters):
         label_parts = []
 
         for parameter, value in zip(comparison_parameters, values):
-            label_part = f"{parameter}={value}"
+            parameter_label = get_plot_parameter_label(parameter)
+            value_label = get_plot_value_label(value)
+            label_part = f"{parameter_label} = {value_label}"
             label_parts.append(label_part)
 
         label = ", ".join(label_parts)
@@ -147,17 +257,16 @@ def add_event_markers(axis, event_markers):
 
     for episode in event_episodes:
         event_time_s = episode["event_time_s"]
-        event_label = (
-            episode["event_types"]
-            .replace("_", " ")
-            .title()
+        event_label = " + ".join(
+            EVENT_TYPE_LABELS.get(event_type, event_type)
+            for event_type in episode["event_types"].split(" + ")
         )
 
         axis.axvline(
             x=event_time_s,
             color="black",
             linestyle="--",
-            label=f"Event: {event_label} (t={event_time_s:g} s)",
+            label=f"Evento: {event_label} (t={event_time_s:g} s)",
         )
 
 
@@ -303,11 +412,13 @@ def save_time_series_plot(
         std_values = configuration_df[std_column].fillna(0.0)
 
         if comparison_parameters:
-            line_label = (f"{configuration_label} (mean ± 1 SD)")
+            line_label = (
+                f"{configuration_label} (media ± 1 deviazione standard)"
+            )
             band_label = None
         else:
             line_label = configuration_label
-            band_label = "Mean ± 1 standard deviation"
+            band_label = MEAN_BAND_LABEL
 
         # plot() returns a list; this call creates exactly one line.
         line = axis.plot(time_s, mean_values, label=line_label)[0]
@@ -336,7 +447,7 @@ def save_time_series_plot(
                 label=reference_curve_label,
             )
 
-    axis.set_xlabel("Simulated time (s; 1 step = 1 s)")
+    axis.set_xlabel("Tempo simulato (s; 1 passo = 1 s)")
     all_time_s = data["simulated_time_s"]
     axis.set_xlim(all_time_s.min(), all_time_s.max())
     axis.set_ylabel(y_label)
@@ -355,14 +466,25 @@ def save_time_series_plot(
         )
 
     add_event_markers(axis, event_markers)
+    add_zero_baseline_margin(axis)
 
     axis.grid(alpha=0.3)
-    axis.legend()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     figure.tight_layout()
-    figure.savefig(output_path, dpi=200)
+
+    axis.legend(
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.0),
+        borderaxespad=0.0,
+    )
+
+    figure.savefig(
+        output_path,
+        dpi=200,
+        bbox_inches="tight",
+    )
     plt.close(figure)
 
 
@@ -377,16 +499,18 @@ def save_j_delta_comparison_plot(
         raise ValueError("The J_delta comparison plot requires exactly one comparison parameter.")
 
     parameter = comparison_parameters[0]
-    plot_data = data.sort_values(parameter)
+    plot_data = data.sort_values(parameter).reset_index(drop=True)
 
-    x_values = plot_data[parameter]
+    parameter_values = plot_data[parameter]
     mean_values = plot_data["J_delta_mean"]
     std_values = plot_data["J_delta_std"].fillna(0.0)
 
     # Connect ordered numeric values, but do not imply continuity between categorical parameter values.
-    if pd.api.types.is_numeric_dtype(x_values):
+    if pd.api.types.is_numeric_dtype(parameter_values):
+        x_values = parameter_values
         plot_format = "o-"
     else:
+        x_values = plot_data.index
         plot_format = "o"
 
     figure, axis = plt.subplots(figsize=(8, 5))
@@ -397,20 +521,36 @@ def save_j_delta_comparison_plot(
         yerr=std_values,
         fmt=plot_format,
         capsize=4,
-        label="Mean ± 1 standard deviation",
+        label=MEAN_BAND_LABEL,
     )
 
-    axis.set_xlabel(parameter)
-    axis.set_ylabel(r"Mean $J_\Delta$")
+    if not pd.api.types.is_numeric_dtype(parameter_values):
+        axis.set_xticks(plot_data.index)
+        axis.set_xticklabels(
+            [get_plot_value_label(value) for value in parameter_values]
+        )
+
+    axis.set_xlabel(get_plot_parameter_label(parameter))
+    axis.set_ylabel(r"Media di $J_\Delta$")
     axis.set_ylim(bottom=0.0)
-    axis.set_title(r"Aggregate normalized deficit ($J_\Delta$)")
+    axis.set_title(r"Deficit normalizzato medio aggregato ($J_\Delta$)")
     axis.grid(alpha=0.3)
-    axis.legend()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     figure.tight_layout()
-    figure.savefig(output_path, dpi=200)
+
+    axis.legend(
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.0),
+        borderaxespad=0.0,
+    )
+
+    figure.savefig(
+        output_path,
+        dpi=200,
+        bbox_inches="tight",
+    )
     plt.close(figure)
 
 
@@ -445,13 +585,13 @@ def save_time_to_90_percent_comparison_plot(
             yerr=std_values[reached_mask],
             fmt="o",
             capsize=4,
-            label="Mean ± 1 standard deviation",
+            label=MEAN_BAND_LABEL,
         )
 
     for position, row in plot_data.iterrows():
         reached_runs = int(row["runs_reaching_90_percent_nominal_service"])
         total_runs = int(row["replications"])
-        reached_label = f"{reached_runs}/{total_runs} reached"
+        reached_label = f"Repliche: {reached_runs}/{total_runs}"
 
         mean_time_s = row["time_to_90_percent_nominal_service_mean_s"]
 
@@ -462,6 +602,7 @@ def save_time_to_90_percent_comparison_plot(
                 xytext=(0, 10),
                 textcoords="offset points",
                 ha="center",
+                fontsize=8,
             )
         else:
             axis.text(
@@ -471,24 +612,39 @@ def save_time_to_90_percent_comparison_plot(
                 transform=axis.get_xaxis_transform(),
                 ha="center",
                 va="bottom",
+                fontsize=8,
             )
     
     axis.set_xticks(plot_data.index)
-    axis.set_xticklabels(plot_data[parameter].astype(str))
-    axis.set_xlabel(parameter)
-    axis.set_ylabel("Mean threshold time among reached runs (s)")
+    axis.set_xticklabels(
+        [get_plot_value_label(value) for value in plot_data[parameter]]
+    )
+    axis.set_xlabel(get_plot_parameter_label(parameter))
+    axis.set_ylabel("Tempo medio di raggiungimento della soglia (s)")
     axis.margins(y=0.15)
     axis.set_ylim(bottom=0.0)
-    axis.set_title(f"Time to {COVERAGE_THRESHOLD:.0%} of nominally obtainable service")
+    axis.set_title(
+        f"Tempo per raggiungere il {COVERAGE_THRESHOLD:.0%} "
+        "del servizio nominalmente ottenibile"
+    )
     axis.grid(alpha=0.3)
-
-    if reached_mask.any():
-        axis.legend()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     figure.tight_layout()
-    figure.savefig(output_path, dpi=200)
+
+    if reached_mask.any():
+        axis.legend(
+            loc="upper left",
+            bbox_to_anchor=(1.02, 1.0),
+            borderaxespad=0.0,
+        )
+
+    figure.savefig(
+        output_path,
+        dpi=200,
+        bbox_inches="tight",
+    )
     plt.close(figure)
 
 
@@ -526,7 +682,7 @@ def save_event_response_comparison_plot(
             yerr=std_values[reached_mask],
             fmt="o",
             capsize=4,
-            label="Mean across runs ± 1 standard deviation",
+            label="Media tra le repliche ± 1 deviazione standard",
         )
 
     for position, row in plot_data.iterrows():
@@ -542,8 +698,8 @@ def save_event_response_comparison_plot(
         total_runs = int(row["replications"])
 
         reached_label = (
-            f"{reached_events}/{total_events} events; "
-            f"{contributing_runs}/{total_runs} runs"
+            f"Episodi: {reached_events}/{total_events}\n"
+            f"Repliche: {contributing_runs}/{total_runs}"
         )
 
         mean_time_s = row["mean_event_response_time_mean_s"]
@@ -555,6 +711,7 @@ def save_event_response_comparison_plot(
                 xytext=(0, 10),
                 textcoords="offset points",
                 ha="center",
+                fontsize=8,
             )
         else:
             axis.text(
@@ -564,27 +721,39 @@ def save_event_response_comparison_plot(
                 transform=axis.get_xaxis_transform(),
                 ha="center",
                 va="bottom",
+                fontsize=8,
             )
 
     axis.set_xticks(plot_data.index)
-    axis.set_xticklabels(plot_data[parameter].astype(str))
-    axis.set_xlabel(parameter)
-    axis.set_ylabel("Mean per-run event response time (s)")
+    axis.set_xticklabels(
+        [get_plot_value_label(value) for value in plot_data[parameter]]
+    )
+    axis.set_xlabel(get_plot_parameter_label(parameter))
+    axis.set_ylabel("Tempo medio di risposta per replica (s)")
     axis.margins(y=0.15)
     axis.set_ylim(bottom=0.0)
     axis.set_title(
-        f"Response time to {COVERAGE_THRESHOLD:.0%} "
-        "of nominally obtainable service after events"
+        f"Tempo di risposta al {COVERAGE_THRESHOLD:.0%} "
+        "del servizio nominalmente ottenibile dopo gli eventi"
     )
     axis.grid(alpha=0.3)
-
-    if reached_mask.any():
-        axis.legend()
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     figure.tight_layout()
-    figure.savefig(output_path, dpi=200)
+
+    if reached_mask.any():
+        axis.legend(
+            loc="upper left",
+            bbox_to_anchor=(1.02, 1.0),
+            borderaxespad=0.0,
+        )
+
+    figure.savefig(
+        output_path,
+        dpi=200,
+        bbox_inches="tight",
+    )
     plt.close(figure)
 
 
@@ -607,17 +776,17 @@ def save_fleet_state_plot(
         (
             "idle_drones_mean",
             "idle_drones_std",
-            "Idle drones",
+            "Droni non in copertura",
         ),
         (
             "exploring_drones_mean",
             "exploring_drones_std",
-            "Exploring drones",
+            "Droni in esplorazione",
         ),
         (
             "stationing_drones_mean",
             "stationing_drones_std",
-            "Stationing drones",
+            "Droni in stazionamento",
         ),
     )
 
@@ -634,10 +803,11 @@ def save_fleet_state_plot(
 
             if comparison_parameters:
                 line_label = (
-                    f"{configuration_label} (mean ± 1 SD)"
+                    f"{configuration_label} "
+                    "(media ± 1 deviazione standard)"
                 )
             else:
-                line_label = "Mean ± 1 standard deviation"
+                line_label = MEAN_BAND_LABEL
 
             line = axis.plot(
                 time_s,
@@ -653,23 +823,37 @@ def save_fleet_state_plot(
                 alpha=0.15
             )
 
-        axis.set_ylabel("Number of drones")
+        axis.set_ylabel("Numero di droni")
         axis.set_ylim(bottom=0.0)
         axis.set_title(state_label)
         add_event_markers(axis, event_markers)
+        add_zero_baseline_margin(axis)
         axis.grid(alpha=0.3)
-        axis.legend()
 
     all_time_s = data["simulated_time_s"]
     axes[-1].set_xlim(all_time_s.min(), all_time_s.max())
-    axes[-1].set_xlabel("Simulated time (s; 1 step = 1 s)")
+    axes[-1].set_xlabel("Tempo simulato (s; 1 passo = 1 s)")
 
-    figure.suptitle("Fleet state over time")
+    figure.suptitle("Stato della flotta nel tempo")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     figure.tight_layout()
-    figure.savefig(output_path, dpi=200)
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    figure.legend(
+        handles,
+        labels,
+        loc="upper left",
+        bbox_to_anchor=(1.01, 0.98),
+        borderaxespad=0.0,
+    )
+
+    figure.savefig(
+        output_path,
+        dpi=200,
+        bbox_inches="tight",
+    )
     plt.close(figure)
 
 
@@ -692,17 +876,17 @@ def save_point_state_plot(
         (
             "underserved_points_mean",
             "underserved_points_std",
-            "Underserved points",
+            "Punti insoddisfatti",
         ),
         (
             "exactly_satisfied_points_mean",
             "exactly_satisfied_points_std",
-            "Exactly satisfied points",
+            "Punti soddisfatti esattamente",
         ),
         (
             "overserved_points_mean",
             "overserved_points_std",
-            "Overserved points",
+            "Punti sovraserviti",
         ),
     )
 
@@ -716,10 +900,11 @@ def save_point_state_plot(
 
             if comparison_parameters:
                 line_label = (
-                    f"{configuration_label} (mean ± 1 SD)"
+                    f"{configuration_label} "
+                    "(media ± 1 deviazione standard)"
                 )
             else:
-                line_label = "Mean ± 1 standard deviation"
+                line_label = MEAN_BAND_LABEL
 
             line = axis.plot(
                 time_s,
@@ -736,9 +921,11 @@ def save_point_state_plot(
             )
 
             if comparison_parameters:
-                active_points_label = (f"{configuration_label}: active points")
+                active_points_label = (
+                    f"{configuration_label}: punti attivi"
+                )
             else:
-                active_points_label = "Active points"
+                active_points_label = "Punti attivi"
 
             axis.plot(
                 time_s,
@@ -749,23 +936,37 @@ def save_point_state_plot(
                 label=active_points_label,
             )
 
-        axis.set_ylabel("Number of points")
+        axis.set_ylabel("Numero di punti")
         axis.set_ylim(bottom=0.0)
         axis.set_title(state_label)
         add_event_markers(axis, event_markers)
+        add_zero_baseline_margin(axis)
         axis.grid(alpha=0.3)
-        axis.legend()
 
     all_time_s = data["simulated_time_s"]
     axes[-1].set_xlim(all_time_s.min(), all_time_s.max())
-    axes[-1].set_xlabel("Simulated time (s; 1 step = 1 s)")
+    axes[-1].set_xlabel("Tempo simulato (s; 1 passo = 1 s)")
 
-    figure.suptitle("Point service state over time")
+    figure.suptitle("Distribuzione del servizio fra i punti nel tempo")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     figure.tight_layout()
-    figure.savefig(output_path, dpi=200)
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    figure.legend(
+        handles,
+        labels,
+        loc="upper left",
+        bbox_to_anchor=(1.01, 0.98),
+        borderaxespad=0.0,
+    )
+
+    figure.savefig(
+        output_path,
+        dpi=200,
+        bbox_inches="tight",
+    )
     plt.close(figure)
 
 def save_scenario_characteristics_plot(
@@ -786,32 +987,32 @@ def save_scenario_characteristics_plot(
         (
             "active_points_mean",
             "active_points_std",
-            "Active points",
-            "Number of points",
+            "Numero di punti attivi",
+            "Numero di punti",
         ),
         (
             "total_demand_mean",
             "total_demand_std",
-            "Total demand",
-            "Demand units",
+            "Domanda totale",
+            "Unità di domanda",
         ),
         (
             "mean_demand_per_point_mean",
             "mean_demand_per_point_std",
-            "Mean demand per point",
-            "Demand units per point",
+            "Domanda media per punto",
+            "Unità di domanda per punto",
         ),
         (
             "fleet_load_mean",
             "fleet_load_std",
-            "Fleet load",
-            "Demand units per drone",
+            "Carico della flotta",
+            "Unità di domanda per drone",
         ),
         (
             "overlapping_zones_mean",
             "overlapping_zones_std",
-            "Overlapping coverage-zone pairs",
-            "Number of point pairs",
+            "Coppie di zone di copertura sovrapposte",
+            "Numero di coppie di punti",
         ),
     )
 
@@ -833,10 +1034,11 @@ def save_scenario_characteristics_plot(
 
             if comparison_parameters:
                 line_label = (
-                    f"{configuration_label} (mean ± 1 SD)"
+                    f"{configuration_label} "
+                    "(media ± 1 deviazione standard)"
                 )
             else:
-                line_label = "Mean ± 1 standard deviation"
+                line_label = MEAN_BAND_LABEL
 
             line = axis.plot(
                 time_s,
@@ -856,19 +1058,33 @@ def save_scenario_characteristics_plot(
         axis.set_ylim(bottom=0.0)
         axis.set_title(panel_title)
         add_event_markers(axis, event_markers)
+        add_zero_baseline_margin(axis)
         axis.grid(alpha=0.3)
-        axis.legend()
 
     all_time_s = data["simulated_time_s"]
     axes[-1].set_xlim(all_time_s.min(), all_time_s.max())
-    axes[-1].set_xlabel("Simulated time (s; 1 step = 1 s)")
+    axes[-1].set_xlabel("Tempo simulato (s; 1 passo = 1 s)")
 
-    figure.suptitle("Scenario characteristics over time")
+    figure.suptitle("Caratteristiche dello scenario nel tempo")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     figure.tight_layout()
-    figure.savefig(output_path, dpi=200)
+
+    handles, labels = axes[0].get_legend_handles_labels()
+    figure.legend(
+        handles,
+        labels,
+        loc="upper left",
+        bbox_to_anchor=(1.01, 0.98),
+        borderaxespad=0.0,
+    )
+
+    figure.savefig(
+        output_path,
+        dpi=200,
+        bbox_inches="tight",
+    )
     plt.close(figure)
 
 
@@ -1150,11 +1366,13 @@ def main():
         mean_column="normalized_deficit_mean",
         std_column="normalized_deficit_std",
         output_path=DEFICIT_FIGURE_PATH,
-        title="Normalized deficit over time",
-        y_label="Fraction of total demand unmet",
+        title="Deficit normalizzato nel tempo",
+        y_label="Frazione della domanda totale insoddisfatta",
         y_limits=(0.0, 1.05),
         reference_series_column="normalized_unavoidable_deficit_mean",
-        reference_series_label="Mean conditional structural reference",
+        reference_series_label=(
+            "Riferimento strutturale normalizzato medio (condizionale)"
+        ),
         event_markers=event_markers
     )
 
@@ -1164,11 +1382,11 @@ def main():
         mean_column="capacity_adjusted_coverage_mean",
         std_column="capacity_adjusted_coverage_std",
         output_path=CAPACITY_ADJUSTED_COVERAGE_FIGURE_PATH,
-        title="Capacity-adjusted coverage over time",
-        y_label="Fraction of nominally obtainable service",
+        title="Copertura rapportata alla capacità nominale nel tempo",
+        y_label="Frazione del servizio nominalmente ottenibile",
         y_limits=(0.0, 1.05),
         reference_y=COVERAGE_THRESHOLD,
-        reference_label=f"{COVERAGE_THRESHOLD:.0%} threshold",
+        reference_label=f"Soglia del {COVERAGE_THRESHOLD:.0%}",
         event_markers=event_markers,
     )
 
@@ -1178,10 +1396,10 @@ def main():
         mean_column="r_delta_mean",
         std_column="r_delta_std",
         output_path=R_DELTA_FIGURE_PATH,
-        title="Normalized deficit reduction over time",
-        y_label="Normalized deficit reduction per step",
+        title="Riduzione normalizzata del deficit nel tempo",
+        y_label="Riduzione normalizzata del deficit per passo",
         reference_y=0.0,
-        reference_label="No change",
+        reference_label="Nessuna variazione",
         event_markers=event_markers
     )
 

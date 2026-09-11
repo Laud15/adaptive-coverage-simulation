@@ -11,26 +11,25 @@ from PointScenario import get_point_routine
 
 def main():
     """Run a static coverage-radius pilot experiment."""
-    experiment_name = "coverage_radius_static_pilot"
+    experiment_name = "static_deployment_comparison"
     simulation_steps = 600
 
     data_collection_period = 1
-    number_processes = 1
-
-    coverage_radius_values = [6.0, 8.0, 10.0]
+    number_processes = None
 
     parameters = {
         "width": 100.0,
         "height": 100.0,
         "n_drones": 40,
         "n_points": 12,
+        "min_priority": 1,
         "max_priority": 3,
         "point_margin": 0.0,
         "flight_buffer": None,
         "point_layout": "random",
         "point_routine": "static",
         "event_seed": 0,
-        "deployment": "dispersed",
+        "deployment": ["dispersed", "base", "left"],
         "deployment_noise": 1.0,
         "drone_type": "quadcopter",
         "meters_per_unit": 1.0,
@@ -39,7 +38,7 @@ def main():
         "drone_sensing_radius": 10.0,
         "point_sensing_radius": 10.0,
         "separation": 2.0,
-        "coverage_radius": coverage_radius_values,
+        "coverage_radius": 8.0,
         "cohere": 0.25,
         "separate": 0.015,
         "match": 0.05,
@@ -69,7 +68,7 @@ def main():
     ]
 
     # Mesa creates one model execution for each configuration and seed.
-    seeds = list(range(10))
+    seeds = list(range(100))
 
     # Record everything needed to identify and reproduce the experiment.
     experiment_config = {

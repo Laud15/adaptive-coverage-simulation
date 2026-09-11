@@ -53,7 +53,8 @@ class CoverageModel(mesa.Model):
         height=100.0, # territory height (y axis)
         n_drones=40, # number of drones, fixed throughout the simulation
         n_points=12, # number of points of interest created initially
-        max_priority=3, # maximum randomly assigned quota: each point requests between 1 and 3 drones
+        min_priority=1, # inclusive lower bound of the initial integer quota range
+        max_priority=3, # inclusive upper bound of the initial integer quota range
         point_margin=0.0, # optional point-center margin inside the study area
         flight_buffer=None, # None -> coverage_radius + speed on every side of the study area
         point_layout="random",  # random | clusters | dispersed | circle | edges | central
@@ -130,6 +131,30 @@ class CoverageModel(mesa.Model):
                 f"Unknown point_layout='{point_layout}': "
                 f"use {POINT_LAYOUTS}."
             )
+
+        if isinstance(min_priority, bool) or not isinstance(
+            min_priority,
+            (int, np.integer),
+        ):
+            raise TypeError("min_priority must be an integer.")
+
+        if isinstance(max_priority, bool) or not isinstance(
+            max_priority,
+            (int, np.integer),
+        ):
+            raise TypeError("max_priority must be an integer.")
+
+        min_priority = int(min_priority)
+        max_priority = int(max_priority)
+
+        if min_priority < 1:
+            raise ValueError("min_priority must be at least 1.")
+
+        if max_priority < 1:
+            raise ValueError("max_priority must be at least 1.")
+
+        if min_priority > max_priority:
+            raise ValueError("min_priority cannot be greater than max_priority.")
 
         study_width = float(width)
         study_height = float(height)
@@ -250,6 +275,8 @@ class CoverageModel(mesa.Model):
         self.height = flight_height
         self.n_drones = int(n_drones)
         self.n_points = int(n_points)
+        self.min_priority = min_priority
+        self.max_priority = max_priority
         self.drone_type = drone_type
         self.drone_class = DRONE_CLASS_BY_TYPE[drone_type]
         self.point_layout = point_layout
@@ -293,10 +320,13 @@ class CoverageModel(mesa.Model):
         # thus CONSUMING 3 while declaring 2.5: total_demand and unavoidable_deficit below would be underestimated,
         # and comparison with the centralized oracle would measure a difference caused only by rounding.
         # With integer quotas, the difference is zero.
-        # NOTE for integers(): the upper bound is EXCLUDED. integers(1, 3) returns 1 or 2, never 3 -> max_priority + 1 is required.
+        # NOTE for integers(): the upper bound is EXCLUDED, so max_priority + 1 is required.
         point_priorities = np.zeros(self.n_points)
         for i in range(self.n_points):
-            point_priorities[i] = self.rng.integers(1, max_priority + 1)
+            point_priorities[i] = self.rng.integers(
+                self.min_priority,
+                self.max_priority + 1,
+            )
 
         # create_agents(model, n, *args, **kwargs): ALWAYS passes model first, 
         # which is why TargetAgent.__init__ begins with 'model' and then reverses the order in super().__init__(space, model).
@@ -341,7 +371,8 @@ class CoverageModel(mesa.Model):
             point_events = build_point_events(
                 routine=routine,
                 initial_n_points=self.n_points,
-                initial_max_priority=max_priority,
+                initial_min_priority=self.min_priority,
+                initial_max_priority=self.max_priority,
                 study_x_min=self.study_x_min,
                 study_x_max=self.study_x_max,
                 study_y_min=self.study_y_min,
