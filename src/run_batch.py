@@ -1,5 +1,6 @@
 """Run reproducible batch experiments for CoverageModel."""
 import json
+from math import prod
 from pathlib import Path
 
 import pandas as pd
@@ -137,7 +138,9 @@ def main():
     if missing_columns:
         raise RuntimeError(f"Batch results are missing columns: {sorted(missing_columns)}")
 
-    expected_runs = len(seeds) * len(coverage_radius_values)
+    varying_parameter_sizes = [len(value) for value in parameters.values() if isinstance(value, list)]
+    expected_configurations = prod(varying_parameter_sizes)
+    expected_runs = len(seeds) * expected_configurations
     actual_runs = results_df["RunId"].nunique()
 
     if actual_runs != expected_runs:
