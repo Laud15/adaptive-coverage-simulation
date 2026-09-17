@@ -18,8 +18,15 @@ wheels/
 # VS Code 
 .vscode/settings.json
 
-# experiments results
-/results
+# Experiment outputs: publish reproducible configurations and summaries only.
+# Raw per-step rows and generated plots remain local.
+/results/*
+!/results/*/
+/results/*/*
+!/results/*/experiment_config.json
+!/results/*/summaries/
+/results/*/summaries/*
+!/results/*/summaries/*.csv
 
 # Personal notes
 /personal_notes

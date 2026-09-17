@@ -6,7 +6,7 @@ An agent-based simulation of adaptive drone coverage over points of interest. Th
 
 The current focus of the project is the decentralized **quadcopter** policy. This is the actively developed and reviewed part of the simulation and the main subject of the research work.
 
-A fixed-wing platform is also included, but it is currently at an initial stage. It provides a preliminary implementation and useful comparison baseline, rather than a policy with the same level of development and validation as the quadcopter system.
+A fixed-wing platform is also included, but it is currently at an initial stage. Its exploratory comparison illustrates the project's development; it is not a validated performance baseline for the quadcopter policy.
 
 The central quadcopter idea is that every staffed point has one authoritative owner. The owner estimates the station deficit, while support drones relay that estimate to nearby drones. No global occupancy value or point identifier is used by the quadcopter decision policy.
 
@@ -74,10 +74,11 @@ adaptive-coverage-simulation/
 |   |-- Agents.py          # Drone and point-of-interest agents
 |   |-- Model.py           # Simulation model, scheduling, and data collection
 |   |-- App.py             # Solara interface and real-time visualization
+|   |-- PointsLayout.py    # Reproducible point layouts
 |   |-- PointScenario.py   # Reusable dynamic point-event routines
 |   |-- run_batch.py       # Reproducible batch experiment execution
 |   `-- analyze_results.py # Saved-result analysis and figure generation
-|-- results/               # Generated experiment outputs, ignored by Git
+|-- results/               # Versioned configurations and summary CSVs; raw data stays local
 |-- pyproject.toml         # Project metadata and direct dependencies
 |-- uv.lock                # Reproducible dependency lock file
 |-- LICENSE
@@ -149,7 +150,7 @@ The model enforces the following core geometry and coordination constraints:
 - flight_buffer >= coverage_radius + speed, so every stationing zone has room for one complete exit step before the world
 boundary;
 - `coverage_radius <= point_sensing_radius`, so a drone cannot cover a point without perceiving it;
-- for quadcopters, `drone_sensing_radius >= point_sensing_radius`, so a quadcopter that perceives a staffed point also perceives its owner at the center;
+- for quadcopters, `drone_sensing_radius >= coverage_radius`, so a quadcopter entering a stationing zone perceives its owner at the center; `point_sensing_radius` may be larger in robustness experiments;
 - for both platforms, `drone_sensing_radius >= separation`, so every drone close enough to activate separation has already been perceived;
 - for quadcopters, `0 < support_inset < coverage_radius`;
 - for fixed-wing drones, `cohere > 0` and `speed / cohere < coverage_radius`.
@@ -524,9 +525,13 @@ one simulation step is one second, and the nominal drone speed is 1 m/s.
 ## Batch experiments and result analysis
 
 `src/run_batch.py` executes reproducible parameter sweeps with Mesa's
-`batch_run()`. Before starting an experiment, configure its name, duration,
-model parameters, and explicit random seeds in the script. A scalar parameter
-value is held fixed, while a list of values defines a parameter to sweep.
+`batch_run()`. The checked-in script shows the E26b configuration; it is not a
+generic JSON loader. To reproduce another experiment, adapt its name, duration,
+seeds, model parameters, configuration loop, and validation from that
+experiment's `results/<experiment_name>/experiment_config.json`. The manifest
+records any `priority_configurations`, `layout_configurations`, or
+`radius_profiles` in addition to the common `parameters`. A scalar parameter
+value is held fixed, while a list defines a parameter to sweep.
 Mesa creates every combination of the supplied parameter values and repeats
 each configuration once for every seed. Therefore:
 
@@ -539,7 +544,9 @@ under corresponding pseudorandom conditions. Each run is still an independent
 `CoverageModel` instance: model parameters do not change during a run unless
 the change is explicitly part of the environmental point-event scenario.
 
-Run the configured batch from the project root:
+The checked-in E26b result directory already exists, so select a new
+`experiment_name` before running the script on a clone. Run the configured
+batch from the project root:
 
 ```bash
 uv run src/run_batch.py
@@ -567,13 +574,13 @@ Each experiment uses the following directory structure:
 results/
 `-- <experiment_name>/
     |-- experiment_config.json
-    |-- raw_results.csv
+    |-- raw_results.csv                    # Local, not versioned
     |-- summaries/
     |   |-- run_summary.csv
     |   |-- aggregate_summary.csv
     |   |-- time_series_summary.csv
     |   `-- event_response_summary.csv
-    `-- figures/
+    `-- figures/                          # Generated locally, not versioned
         |-- normalized_deficit.png
         |-- capacity_adjusted_coverage.png
         |-- deficit_reduction.png
@@ -613,11 +620,20 @@ The generated files have distinct roles:
   static experiments contain no event lines. `event_response_time.png` is
   generated only when event episodes are present.
 
-The complete `results/` directory is ignored by Git because experiment outputs
-can be large and are generated artifacts. Results required for analysis or for
-the thesis must therefore be preserved separately or regenerated from the
-recorded configuration and repository version; they are not included in a
-normal commit or push.
+The experiment directory names are in Italian to match the thesis's experiment
+register. Source code, parameter names, and CSV field names remain in English.
+Git tracks each `experiment_config.json` and the CSV files in `summaries/`.
+It does not track `raw_results.csv` or the generated `figures/` directory: the
+raw observations alone occupy about 3 GiB. To regenerate them, use Mesa's
+`batch_run()` with the stored `simulation_steps`, `data_collection_period`,
+`seeds`, `parameters`, and any experiment-specific configuration list or radius
+profiles. The checked-in `src/run_batch.py` provides one concrete example of
+this procedure; it must be adapted for a different manifest. Use the locked
+dependencies and a new output name because the script refuses to overwrite
+existing experiment directories. Then set `EXPERIMENT_NAME` and
+`COMPARISON_PARAMETERS` in `src/analyze_results.py` and run it to rebuild the
+summaries and figures. The published summaries can be inspected without
+regenerating the much larger raw observations.
 
 ## Data collection and plots
 
@@ -633,9 +649,11 @@ The interface can display:
 - `idle_drones`: drones not currently covering any point;
 - `exploring_drones`: drones with no useful destination currently known;
 - `stationing_drones`: drones whose current role is `owner` or `support`;
+- `covered_points`: points whose occupancy is greater than zero;
 - `underserved_points`: points whose occupancy is below their priority;
 - `exactly_satisfied_points`: points whose occupancy equals their priority;
 - `overserved_points`: points whose occupancy exceeds their priority;
+- `excess_service_units`: total service contributions supplied above point quotas;
 - `active_points`: current number of active points;
 - `total_demand`: sum of the quotas of the currently active points.
 

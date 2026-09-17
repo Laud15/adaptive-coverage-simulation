@@ -1,0 +1,801 @@
+RunId,seed,radius_profile,event_index,event_step,event_time_s,event_types,next_event_step,coverage_threshold,threshold_reached,time_to_90_percent_nominal_service_after_event_s
+1,0,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,75.0
+1,0,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+1,0,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+1,0,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,178.0
+2,1,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,131.0
+2,1,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,217.0
+2,1,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+2,1,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,140.0
+3,2,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,206.0
+3,2,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,239.0
+3,2,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+3,2,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,105.0
+4,3,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,189.0
+4,3,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+4,3,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+4,3,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,152.0
+5,4,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+5,4,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+5,4,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+5,4,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,51.0
+6,5,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+6,5,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+6,5,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+6,5,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,123.0
+7,6,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,188.0
+7,6,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+7,6,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+7,6,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,154.0
+8,7,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,209.0
+8,7,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,201.0
+8,7,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+8,7,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,168.0
+9,8,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,195.0
+9,8,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+9,8,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+9,8,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,181.0
+10,9,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,182.0
+10,9,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+10,9,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,8.0
+10,9,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,236.0
+11,10,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+11,10,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+11,10,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+11,10,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,259.0
+12,11,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,36.0
+12,11,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,299.0
+12,11,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+12,11,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,76.0
+13,12,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,149.0
+13,12,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,220.0
+13,12,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+13,12,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,False,
+14,13,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,67.0
+14,13,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+14,13,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+14,13,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,64.0
+15,14,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,196.0
+15,14,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+15,14,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,23.0
+15,14,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,77.0
+16,15,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,98.0
+16,15,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+16,15,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,96.0
+16,15,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,False,
+17,16,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,195.0
+17,16,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,272.0
+17,16,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+17,16,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,189.0
+18,17,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,190.0
+18,17,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+18,17,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+18,17,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,288.0
+19,18,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,64.0
+19,18,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+19,18,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+19,18,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,160.0
+20,19,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,255.0
+20,19,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+20,19,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+20,19,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,236.0
+21,20,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,121.0
+21,20,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+21,20,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+21,20,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,113.0
+22,21,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,147.0
+22,21,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,279.0
+22,21,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+22,21,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,135.0
+23,22,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,234.0
+23,22,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+23,22,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+23,22,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,220.0
+24,23,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,35.0
+24,23,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+24,23,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+24,23,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,153.0
+25,24,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,61.0
+25,24,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,248.0
+25,24,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+25,24,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,55.0
+26,25,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,270.0
+26,25,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+26,25,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,24.0
+26,25,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,91.0
+27,26,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,149.0
+27,26,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,185.0
+27,26,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+27,26,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,117.0
+28,27,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+28,27,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,195.0
+28,27,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+28,27,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,10.0
+29,28,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,91.0
+29,28,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+29,28,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+29,28,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,101.0
+30,29,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+30,29,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,209.0
+30,29,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+30,29,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,250.0
+31,30,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+31,30,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+31,30,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+31,30,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,239.0
+32,31,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,83.0
+32,31,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,283.0
+32,31,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+32,31,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,39.0
+33,32,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,125.0
+33,32,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,243.0
+33,32,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+33,32,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,137.0
+34,33,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+34,33,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,181.0
+34,33,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+34,33,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,55.0
+35,34,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,256.0
+35,34,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+35,34,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,108.0
+35,34,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,137.0
+36,35,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,133.0
+36,35,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+36,35,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,6.0
+36,35,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,205.0
+37,36,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+37,36,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,174.0
+37,36,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+37,36,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,59.0
+38,37,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,277.0
+38,37,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+38,37,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+38,37,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,111.0
+39,38,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,158.0
+39,38,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,150.0
+39,38,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+39,38,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,62.0
+40,39,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,49.0
+40,39,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+40,39,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+40,39,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,47.0
+41,40,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,234.0
+41,40,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+41,40,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+41,40,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,96.0
+42,41,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,85.0
+42,41,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,237.0
+42,41,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+42,41,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,192.0
+43,42,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+43,42,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,190.0
+43,42,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+43,42,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,75.0
+44,43,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,98.0
+44,43,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+44,43,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+44,43,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,23.0
+45,44,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,128.0
+45,44,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+45,44,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+45,44,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,208.0
+46,45,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+46,45,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+46,45,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,71.0
+46,45,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,False,
+47,46,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,68.0
+47,46,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+47,46,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,7.0
+47,46,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,178.0
+48,47,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,139.0
+48,47,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,241.0
+48,47,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+48,47,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,77.0
+49,48,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,94.0
+49,48,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,248.0
+49,48,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+49,48,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,56.0
+50,49,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,257.0
+50,49,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,253.0
+50,49,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+50,49,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,220.0
+51,50,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,122.0
+51,50,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+51,50,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+51,50,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,92.0
+52,51,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,259.0
+52,51,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+52,51,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+52,51,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,113.0
+53,52,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+53,52,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+53,52,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+53,52,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,91.0
+54,53,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,131.0
+54,53,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,232.0
+54,53,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+54,53,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,175.0
+55,54,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,210.0
+55,54,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,234.0
+55,54,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+55,54,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,15.0
+56,55,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,273.0
+56,55,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,224.0
+56,55,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+56,55,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,18.0
+57,56,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,47.0
+57,56,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,184.0
+57,56,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+57,56,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,53.0
+58,57,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,296.0
+58,57,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,109.0
+58,57,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+58,57,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,97.0
+59,58,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,111.0
+59,58,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,202.0
+59,58,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+59,58,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,100.0
+60,59,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,83.0
+60,59,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,196.0
+60,59,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+60,59,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,285.0
+61,60,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,292.0
+61,60,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+61,60,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+61,60,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,76.0
+62,61,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+62,61,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+62,61,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+62,61,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,67.0
+63,62,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,80.0
+63,62,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+63,62,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+63,62,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,170.0
+64,63,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,137.0
+64,63,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,248.0
+64,63,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+64,63,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,11.0
+65,64,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,19.0
+65,64,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+65,64,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+65,64,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,94.0
+66,65,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,152.0
+66,65,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,253.0
+66,65,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+66,65,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,57.0
+67,66,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+67,66,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,221.0
+67,66,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+67,66,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,275.0
+68,67,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,286.0
+68,67,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,191.0
+68,67,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+68,67,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,202.0
+69,68,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,133.0
+69,68,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,231.0
+69,68,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+69,68,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,54.0
+70,69,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,122.0
+70,69,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+70,69,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,12.0
+70,69,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,154.0
+71,70,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,87.0
+71,70,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+71,70,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,68.0
+71,70,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,72.0
+72,71,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,94.0
+72,71,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,214.0
+72,71,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+72,71,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,286.0
+73,72,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,235.0
+73,72,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+73,72,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,13.0
+73,72,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,141.0
+74,73,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,214.0
+74,73,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,141.0
+74,73,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+74,73,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,191.0
+75,74,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,200.0
+75,74,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,168.0
+75,74,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+75,74,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,268.0
+76,75,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,173.0
+76,75,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,169.0
+76,75,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+76,75,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,266.0
+77,76,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,109.0
+77,76,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+77,76,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+77,76,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,250.0
+78,77,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,186.0
+78,77,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,114.0
+78,77,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+78,77,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,159.0
+79,78,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,73.0
+79,78,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,185.0
+79,78,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+79,78,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,238.0
+80,79,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,64.0
+80,79,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,173.0
+80,79,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+80,79,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,111.0
+81,80,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,88.0
+81,80,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,156.0
+81,80,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+81,80,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,49.0
+82,81,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,95.0
+82,81,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,269.0
+82,81,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+82,81,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,175.0
+83,82,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,122.0
+83,82,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,289.0
+83,82,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+83,82,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,174.0
+84,83,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+84,83,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+84,83,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,38.0
+84,83,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,108.0
+85,84,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,96.0
+85,84,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+85,84,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,85.0
+85,84,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,194.0
+86,85,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,136.0
+86,85,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,141.0
+86,85,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+86,85,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,206.0
+87,86,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,163.0
+87,86,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+87,86,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,9.0
+87,86,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,111.0
+88,87,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,190.0
+88,87,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+88,87,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+88,87,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,13.0
+89,88,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,136.0
+89,88,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,248.0
+89,88,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+89,88,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,False,
+90,89,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,False,
+90,89,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,168.0
+90,89,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+90,89,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,96.0
+91,90,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,141.0
+91,90,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,213.0
+91,90,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+91,90,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,131.0
+92,91,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,39.0
+92,91,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+92,91,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,23.0
+92,91,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,False,
+93,92,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,59.0
+93,92,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,237.0
+93,92,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+93,92,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,250.0
+94,93,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,129.0
+94,93,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,250.0
+94,93,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+94,93,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,171.0
+95,94,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,45.0
+95,94,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+95,94,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+95,94,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,55.0
+96,95,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,154.0
+96,95,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+96,95,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,159.0
+96,95,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,74.0
+97,96,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,196.0
+97,96,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,292.0
+97,96,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+97,96,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,60.0
+98,97,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,145.0
+98,97,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,257.0
+98,97,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+98,97,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,119.0
+99,98,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,158.0
+99,98,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,264.0
+99,98,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+99,98,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,71.0
+100,99,rd10_rp10_nominal,1,600,600.0,set_priorities,900.0,0.9,True,105.0
+100,99,rd10_rp10_nominal,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+100,99,rd10_rp10_nominal,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+100,99,rd10_rp10_nominal,4,1500,1500.0,remove_points + set_priorities,,0.9,True,131.0
+101,0,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,36.0
+101,0,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,79.0
+101,0,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+101,0,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,14.0
+102,1,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,44.0
+102,1,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,40.0
+102,1,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+102,1,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,25.0
+103,2,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,132.0
+103,2,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,182.0
+103,2,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+103,2,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,83.0
+104,3,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,48.0
+104,3,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,105.0
+104,3,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+104,3,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,17.0
+105,4,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,37.0
+105,4,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,243.0
+105,4,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+105,4,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,19.0
+106,5,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,False,
+106,5,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,63.0
+106,5,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+106,5,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,17.0
+107,6,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,18.0
+107,6,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,44.0
+107,6,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+107,6,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,17.0
+108,7,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,20.0
+108,7,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,50.0
+108,7,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+108,7,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,14.0
+109,8,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,56.0
+109,8,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,29.0
+109,8,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+109,8,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,25.0
+110,9,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,50.0
+110,9,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+110,9,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+110,9,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,20.0
+111,10,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,223.0
+111,10,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,70.0
+111,10,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+111,10,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,14.0
+112,11,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,54.0
+112,11,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,102.0
+112,11,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+112,11,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,22.0
+113,12,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,37.0
+113,12,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,181.0
+113,12,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+113,12,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,16.0
+114,13,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,40.0
+114,13,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,155.0
+114,13,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+114,13,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,18.0
+115,14,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,20.0
+115,14,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+115,14,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+115,14,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,20.0
+116,15,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,13.0
+116,15,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,110.0
+116,15,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+116,15,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,20.0
+117,16,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,101.0
+117,16,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,59.0
+117,16,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+117,16,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,16.0
+118,17,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,60.0
+118,17,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,203.0
+118,17,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+118,17,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,81.0
+119,18,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,65.0
+119,18,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,178.0
+119,18,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+119,18,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,14.0
+120,19,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,False,
+120,19,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,74.0
+120,19,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+120,19,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,12.0
+121,20,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,13.0
+121,20,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,158.0
+121,20,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+121,20,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,71.0
+122,21,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,70.0
+122,21,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,141.0
+122,21,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+122,21,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,16.0
+123,22,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,116.0
+123,22,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+123,22,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,7.0
+123,22,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,51.0
+124,23,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,61.0
+124,23,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+124,23,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+124,23,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,83.0
+125,24,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,180.0
+125,24,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,250.0
+125,24,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+125,24,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,12.0
+126,25,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,23.0
+126,25,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,65.0
+126,25,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+126,25,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,11.0
+127,26,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,294.0
+127,26,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,97.0
+127,26,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+127,26,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,12.0
+128,27,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,227.0
+128,27,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,86.0
+128,27,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+128,27,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,11.0
+129,28,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,47.0
+129,28,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,161.0
+129,28,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+129,28,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,18.0
+130,29,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,212.0
+130,29,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,88.0
+130,29,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+130,29,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,21.0
+131,30,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,20.0
+131,30,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,232.0
+131,30,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+131,30,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,18.0
+132,31,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,31.0
+132,31,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,44.0
+132,31,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+132,31,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,20.0
+133,32,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,20.0
+133,32,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,113.0
+133,32,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+133,32,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,18.0
+134,33,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,False,
+134,33,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,49.0
+134,33,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+134,33,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,11.0
+135,34,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,267.0
+135,34,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,167.0
+135,34,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+135,34,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,69.0
+136,35,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,46.0
+136,35,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,136.0
+136,35,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+136,35,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,27.0
+137,36,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,19.0
+137,36,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,53.0
+137,36,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+137,36,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,15.0
+138,37,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,50.0
+138,37,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,53.0
+138,37,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+138,37,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,16.0
+139,38,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,15.0
+139,38,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,81.0
+139,38,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+139,38,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,11.0
+140,39,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,21.0
+140,39,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,67.0
+140,39,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+140,39,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,11.0
+141,40,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,243.0
+141,40,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,96.0
+141,40,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+141,40,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,19.0
+142,41,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,197.0
+142,41,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,90.0
+142,41,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+142,41,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,15.0
+143,42,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,75.0
+143,42,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,48.0
+143,42,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+143,42,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,22.0
+144,43,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,97.0
+144,43,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,56.0
+144,43,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+144,43,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,24.0
+145,44,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,140.0
+145,44,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,49.0
+145,44,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+145,44,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,23.0
+146,45,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,144.0
+146,45,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,273.0
+146,45,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+146,45,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,89.0
+147,46,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,143.0
+147,46,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,56.0
+147,46,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+147,46,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,18.0
+148,47,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,19.0
+148,47,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,132.0
+148,47,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+148,47,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,51.0
+149,48,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,37.0
+149,48,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,46.0
+149,48,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+149,48,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,12.0
+150,49,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,16.0
+150,49,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,47.0
+150,49,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+150,49,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,17.0
+151,50,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,83.0
+151,50,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,38.0
+151,50,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+151,50,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,17.0
+152,51,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,236.0
+152,51,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,47.0
+152,51,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+152,51,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,11.0
+153,52,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,254.0
+153,52,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+153,52,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+153,52,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,274.0
+154,53,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,30.0
+154,53,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,178.0
+154,53,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+154,53,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,30.0
+155,54,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,16.0
+155,54,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,76.0
+155,54,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+155,54,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,15.0
+156,55,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,20.0
+156,55,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,121.0
+156,55,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+156,55,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,13.0
+157,56,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,67.0
+157,56,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,41.0
+157,56,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+157,56,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,13.0
+158,57,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,255.0
+158,57,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,49.0
+158,57,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+158,57,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,14.0
+159,58,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,106.0
+159,58,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+159,58,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+159,58,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,80.0
+160,59,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,19.0
+160,59,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,82.0
+160,59,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+160,59,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,22.0
+161,60,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,False,
+161,60,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,85.0
+161,60,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+161,60,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,15.0
+162,61,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,68.0
+162,61,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,False,
+162,61,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+162,61,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,26.0
+163,62,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,212.0
+163,62,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,65.0
+163,62,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+163,62,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,12.0
+164,63,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,False,
+164,63,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,96.0
+164,63,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+164,63,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,17.0
+165,64,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,106.0
+165,64,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,50.0
+165,64,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+165,64,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,19.0
+166,65,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,26.0
+166,65,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,66.0
+166,65,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+166,65,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,16.0
+167,66,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,30.0
+167,66,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,191.0
+167,66,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+167,66,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,16.0
+168,67,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,104.0
+168,67,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,106.0
+168,67,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+168,67,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,18.0
+169,68,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,50.0
+169,68,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,52.0
+169,68,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+169,68,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,11.0
+170,69,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,39.0
+170,69,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,237.0
+170,69,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+170,69,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,20.0
+171,70,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,65.0
+171,70,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,191.0
+171,70,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+171,70,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,19.0
+172,71,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,False,
+172,71,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,156.0
+172,71,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+172,71,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,14.0
+173,72,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,188.0
+173,72,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,56.0
+173,72,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+173,72,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,11.0
+174,73,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,84.0
+174,73,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,59.0
+174,73,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+174,73,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,18.0
+175,74,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,88.0
+175,74,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,215.0
+175,74,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+175,74,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,14.0
+176,75,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,44.0
+176,75,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,207.0
+176,75,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+176,75,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,22.0
+177,76,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,115.0
+177,76,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,61.0
+177,76,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+177,76,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,70.0
+178,77,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,14.0
+178,77,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,276.0
+178,77,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+178,77,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,16.0
+179,78,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,15.0
+179,78,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,220.0
+179,78,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+179,78,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,16.0
+180,79,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,16.0
+180,79,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,98.0
+180,79,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+180,79,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,22.0
+181,80,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,46.0
+181,80,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,43.0
+181,80,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+181,80,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,16.0
+182,81,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,149.0
+182,81,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,53.0
+182,81,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+182,81,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,31.0
+183,82,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,50.0
+183,82,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,81.0
+183,82,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+183,82,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,50.0
+184,83,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,286.0
+184,83,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,74.0
+184,83,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+184,83,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,17.0
+185,84,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,17.0
+185,84,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,51.0
+185,84,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+185,84,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,20.0
+186,85,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,69.0
+186,85,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,59.0
+186,85,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+186,85,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,142.0
+187,86,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,51.0
+187,86,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,45.0
+187,86,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+187,86,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,19.0
+188,87,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,87.0
+188,87,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,72.0
+188,87,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+188,87,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,12.0
+189,88,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,False,
+189,88,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,47.0
+189,88,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+189,88,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,12.0
+190,89,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,19.0
+190,89,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,97.0
+190,89,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+190,89,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,16.0
+191,90,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,False,
+191,90,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,81.0
+191,90,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+191,90,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,12.0
+192,91,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,46.0
+192,91,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,86.0
+192,91,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+192,91,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,16.0
+193,92,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,69.0
+193,92,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,185.0
+193,92,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+193,92,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,22.0
+194,93,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,146.0
+194,93,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,221.0
+194,93,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+194,93,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,18.0
+195,94,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,False,
+195,94,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,97.0
+195,94,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+195,94,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,14.0
+196,95,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,22.0
+196,95,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,93.0
+196,95,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+196,95,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,23.0
+197,96,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,20.0
+197,96,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,125.0
+197,96,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+197,96,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,14.0
+198,97,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,107.0
+198,97,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,83.0
+198,97,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+198,97,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,17.0
+199,98,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,46.0
+199,98,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,103.0
+199,98,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+199,98,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,75.0
+200,99,rd25_rp25_potenziato,1,600,600.0,set_priorities,900.0,0.9,True,18.0
+200,99,rd25_rp25_potenziato,2,900,900.0,reconfigure + set_priorities,1200.0,0.9,True,45.0
+200,99,rd25_rp25_potenziato,3,1200,1200.0,add_points + set_priorities,1500.0,0.9,True,0.0
+200,99,rd25_rp25_potenziato,4,1500,1500.0,remove_points + set_priorities,,0.9,True,20.0

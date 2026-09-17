@@ -1,0 +1,1 @@
+RunId,seed,initial_fleet_load,drone_sensing_radius,event_index,event_step,event_time_s,event_types,next_event_step,coverage_threshold,threshold_reached,time_to_90_percent_nominal_service_after_event_s

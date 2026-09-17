@@ -1,0 +1,401 @@
+RunId,seed,event_index,event_step,event_time_s,event_types,next_event_step,coverage_threshold,threshold_reached,time_to_90_percent_nominal_service_after_event_s
+0,0,1,600,600.0,set_priorities,1200.0,0.9,True,75.0
+0,0,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,495.0
+0,0,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+0,0,4,2400,2400.0,remove_points + set_priorities,,0.9,True,22.0
+1,1,1,600,600.0,set_priorities,1200.0,0.9,True,131.0
+1,1,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,164.0
+1,1,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+1,1,4,2400,2400.0,remove_points + set_priorities,,0.9,True,216.0
+2,2,1,600,600.0,set_priorities,1200.0,0.9,True,206.0
+2,2,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,305.0
+2,2,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+2,2,4,2400,2400.0,remove_points + set_priorities,,0.9,True,149.0
+3,3,1,600,600.0,set_priorities,1200.0,0.9,True,189.0
+3,3,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,290.0
+3,3,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+3,3,4,2400,2400.0,remove_points + set_priorities,,0.9,True,10.0
+4,4,1,600,600.0,set_priorities,1200.0,0.9,True,475.0
+4,4,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,297.0
+4,4,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+4,4,4,2400,2400.0,remove_points + set_priorities,,0.9,True,101.0
+5,5,1,600,600.0,set_priorities,1200.0,0.9,True,335.0
+5,5,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,285.0
+5,5,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+5,5,4,2400,2400.0,remove_points + set_priorities,,0.9,True,111.0
+6,6,1,600,600.0,set_priorities,1200.0,0.9,True,188.0
+6,6,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,258.0
+6,6,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+6,6,4,2400,2400.0,remove_points + set_priorities,,0.9,True,129.0
+7,7,1,600,600.0,set_priorities,1200.0,0.9,True,209.0
+7,7,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,398.0
+7,7,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+7,7,4,2400,2400.0,remove_points + set_priorities,,0.9,True,52.0
+8,8,1,600,600.0,set_priorities,1200.0,0.9,True,195.0
+8,8,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,323.0
+8,8,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+8,8,4,2400,2400.0,remove_points + set_priorities,,0.9,True,227.0
+9,9,1,600,600.0,set_priorities,1200.0,0.9,True,182.0
+9,9,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,399.0
+9,9,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+9,9,4,2400,2400.0,remove_points + set_priorities,,0.9,True,68.0
+10,10,1,600,600.0,set_priorities,1200.0,0.9,False,
+10,10,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,338.0
+10,10,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+10,10,4,2400,2400.0,remove_points + set_priorities,,0.9,True,136.0
+11,11,1,600,600.0,set_priorities,1200.0,0.9,True,36.0
+11,11,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,223.0
+11,11,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+11,11,4,2400,2400.0,remove_points + set_priorities,,0.9,True,56.0
+12,12,1,600,600.0,set_priorities,1200.0,0.9,True,149.0
+12,12,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,475.0
+12,12,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+12,12,4,2400,2400.0,remove_points + set_priorities,,0.9,True,107.0
+13,13,1,600,600.0,set_priorities,1200.0,0.9,True,67.0
+13,13,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,327.0
+13,13,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+13,13,4,2400,2400.0,remove_points + set_priorities,,0.9,True,170.0
+14,14,1,600,600.0,set_priorities,1200.0,0.9,True,196.0
+14,14,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,369.0
+14,14,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+14,14,4,2400,2400.0,remove_points + set_priorities,,0.9,True,11.0
+15,15,1,600,600.0,set_priorities,1200.0,0.9,True,98.0
+15,15,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,245.0
+15,15,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+15,15,4,2400,2400.0,remove_points + set_priorities,,0.9,True,140.0
+16,16,1,600,600.0,set_priorities,1200.0,0.9,True,195.0
+16,16,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,False,
+16,16,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+16,16,4,2400,2400.0,remove_points + set_priorities,,0.9,True,57.0
+17,17,1,600,600.0,set_priorities,1200.0,0.9,True,190.0
+17,17,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,148.0
+17,17,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+17,17,4,2400,2400.0,remove_points + set_priorities,,0.9,True,47.0
+18,18,1,600,600.0,set_priorities,1200.0,0.9,True,64.0
+18,18,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,250.0
+18,18,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+18,18,4,2400,2400.0,remove_points + set_priorities,,0.9,True,49.0
+19,19,1,600,600.0,set_priorities,1200.0,0.9,True,255.0
+19,19,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,290.0
+19,19,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+19,19,4,2400,2400.0,remove_points + set_priorities,,0.9,True,48.0
+20,20,1,600,600.0,set_priorities,1200.0,0.9,True,121.0
+20,20,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,312.0
+20,20,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+20,20,4,2400,2400.0,remove_points + set_priorities,,0.9,True,144.0
+21,21,1,600,600.0,set_priorities,1200.0,0.9,True,147.0
+21,21,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,296.0
+21,21,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+21,21,4,2400,2400.0,remove_points + set_priorities,,0.9,True,139.0
+22,22,1,600,600.0,set_priorities,1200.0,0.9,True,234.0
+22,22,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,345.0
+22,22,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+22,22,4,2400,2400.0,remove_points + set_priorities,,0.9,True,148.0
+23,23,1,600,600.0,set_priorities,1200.0,0.9,True,35.0
+23,23,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,341.0
+23,23,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+23,23,4,2400,2400.0,remove_points + set_priorities,,0.9,True,182.0
+24,24,1,600,600.0,set_priorities,1200.0,0.9,True,61.0
+24,24,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,316.0
+24,24,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+24,24,4,2400,2400.0,remove_points + set_priorities,,0.9,True,15.0
+25,25,1,600,600.0,set_priorities,1200.0,0.9,True,270.0
+25,25,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,311.0
+25,25,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+25,25,4,2400,2400.0,remove_points + set_priorities,,0.9,True,243.0
+26,26,1,600,600.0,set_priorities,1200.0,0.9,True,149.0
+26,26,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,390.0
+26,26,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+26,26,4,2400,2400.0,remove_points + set_priorities,,0.9,True,81.0
+27,27,1,600,600.0,set_priorities,1200.0,0.9,True,405.0
+27,27,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,114.0
+27,27,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+27,27,4,2400,2400.0,remove_points + set_priorities,,0.9,True,47.0
+28,28,1,600,600.0,set_priorities,1200.0,0.9,True,91.0
+28,28,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,287.0
+28,28,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+28,28,4,2400,2400.0,remove_points + set_priorities,,0.9,True,154.0
+29,29,1,600,600.0,set_priorities,1200.0,0.9,True,306.0
+29,29,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,180.0
+29,29,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+29,29,4,2400,2400.0,remove_points + set_priorities,,0.9,True,12.0
+30,30,1,600,600.0,set_priorities,1200.0,0.9,True,470.0
+30,30,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,346.0
+30,30,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+30,30,4,2400,2400.0,remove_points + set_priorities,,0.9,True,67.0
+31,31,1,600,600.0,set_priorities,1200.0,0.9,True,83.0
+31,31,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,False,
+31,31,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+31,31,4,2400,2400.0,remove_points + set_priorities,,0.9,True,331.0
+32,32,1,600,600.0,set_priorities,1200.0,0.9,True,125.0
+32,32,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,414.0
+32,32,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+32,32,4,2400,2400.0,remove_points + set_priorities,,0.9,True,66.0
+33,33,1,600,600.0,set_priorities,1200.0,0.9,True,479.0
+33,33,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,219.0
+33,33,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+33,33,4,2400,2400.0,remove_points + set_priorities,,0.9,True,81.0
+34,34,1,600,600.0,set_priorities,1200.0,0.9,True,256.0
+34,34,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,513.0
+34,34,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+34,34,4,2400,2400.0,remove_points + set_priorities,,0.9,True,174.0
+35,35,1,600,600.0,set_priorities,1200.0,0.9,True,133.0
+35,35,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,False,
+35,35,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+35,35,4,2400,2400.0,remove_points + set_priorities,,0.9,True,263.0
+36,36,1,600,600.0,set_priorities,1200.0,0.9,True,316.0
+36,36,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,182.0
+36,36,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+36,36,4,2400,2400.0,remove_points + set_priorities,,0.9,True,57.0
+37,37,1,600,600.0,set_priorities,1200.0,0.9,True,277.0
+37,37,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,471.0
+37,37,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+37,37,4,2400,2400.0,remove_points + set_priorities,,0.9,True,69.0
+38,38,1,600,600.0,set_priorities,1200.0,0.9,True,158.0
+38,38,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,195.0
+38,38,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+38,38,4,2400,2400.0,remove_points + set_priorities,,0.9,True,66.0
+39,39,1,600,600.0,set_priorities,1200.0,0.9,True,49.0
+39,39,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,209.0
+39,39,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+39,39,4,2400,2400.0,remove_points + set_priorities,,0.9,True,176.0
+40,40,1,600,600.0,set_priorities,1200.0,0.9,True,234.0
+40,40,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,148.0
+40,40,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+40,40,4,2400,2400.0,remove_points + set_priorities,,0.9,True,67.0
+41,41,1,600,600.0,set_priorities,1200.0,0.9,True,85.0
+41,41,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,280.0
+41,41,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+41,41,4,2400,2400.0,remove_points + set_priorities,,0.9,True,90.0
+42,42,1,600,600.0,set_priorities,1200.0,0.9,True,465.0
+42,42,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,276.0
+42,42,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+42,42,4,2400,2400.0,remove_points + set_priorities,,0.9,True,48.0
+43,43,1,600,600.0,set_priorities,1200.0,0.9,True,98.0
+43,43,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,256.0
+43,43,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+43,43,4,2400,2400.0,remove_points + set_priorities,,0.9,True,10.0
+44,44,1,600,600.0,set_priorities,1200.0,0.9,True,128.0
+44,44,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,552.0
+44,44,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+44,44,4,2400,2400.0,remove_points + set_priorities,,0.9,True,56.0
+45,45,1,600,600.0,set_priorities,1200.0,0.9,True,422.0
+45,45,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,204.0
+45,45,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+45,45,4,2400,2400.0,remove_points + set_priorities,,0.9,True,167.0
+46,46,1,600,600.0,set_priorities,1200.0,0.9,True,68.0
+46,46,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,221.0
+46,46,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+46,46,4,2400,2400.0,remove_points + set_priorities,,0.9,True,165.0
+47,47,1,600,600.0,set_priorities,1200.0,0.9,True,139.0
+47,47,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,178.0
+47,47,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+47,47,4,2400,2400.0,remove_points + set_priorities,,0.9,True,140.0
+48,48,1,600,600.0,set_priorities,1200.0,0.9,True,94.0
+48,48,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,151.0
+48,48,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+48,48,4,2400,2400.0,remove_points + set_priorities,,0.9,True,64.0
+49,49,1,600,600.0,set_priorities,1200.0,0.9,True,257.0
+49,49,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,429.0
+49,49,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+49,49,4,2400,2400.0,remove_points + set_priorities,,0.9,True,66.0
+50,50,1,600,600.0,set_priorities,1200.0,0.9,True,122.0
+50,50,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,279.0
+50,50,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+50,50,4,2400,2400.0,remove_points + set_priorities,,0.9,True,68.0
+51,51,1,600,600.0,set_priorities,1200.0,0.9,True,259.0
+51,51,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,234.0
+51,51,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+51,51,4,2400,2400.0,remove_points + set_priorities,,0.9,True,134.0
+52,52,1,600,600.0,set_priorities,1200.0,0.9,True,438.0
+52,52,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,417.0
+52,52,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+52,52,4,2400,2400.0,remove_points + set_priorities,,0.9,True,126.0
+53,53,1,600,600.0,set_priorities,1200.0,0.9,True,131.0
+53,53,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,366.0
+53,53,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+53,53,4,2400,2400.0,remove_points + set_priorities,,0.9,True,132.0
+54,54,1,600,600.0,set_priorities,1200.0,0.9,True,210.0
+54,54,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,247.0
+54,54,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+54,54,4,2400,2400.0,remove_points + set_priorities,,0.9,True,15.0
+55,55,1,600,600.0,set_priorities,1200.0,0.9,True,273.0
+55,55,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,599.0
+55,55,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+55,55,4,2400,2400.0,remove_points + set_priorities,,0.9,True,112.0
+56,56,1,600,600.0,set_priorities,1200.0,0.9,True,47.0
+56,56,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,292.0
+56,56,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+56,56,4,2400,2400.0,remove_points + set_priorities,,0.9,True,63.0
+57,57,1,600,600.0,set_priorities,1200.0,0.9,True,296.0
+57,57,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,56.0
+57,57,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+57,57,4,2400,2400.0,remove_points + set_priorities,,0.9,True,63.0
+58,58,1,600,600.0,set_priorities,1200.0,0.9,True,111.0
+58,58,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,413.0
+58,58,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+58,58,4,2400,2400.0,remove_points + set_priorities,,0.9,True,269.0
+59,59,1,600,600.0,set_priorities,1200.0,0.9,True,83.0
+59,59,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,435.0
+59,59,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+59,59,4,2400,2400.0,remove_points + set_priorities,,0.9,True,49.0
+60,60,1,600,600.0,set_priorities,1200.0,0.9,True,292.0
+60,60,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,289.0
+60,60,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+60,60,4,2400,2400.0,remove_points + set_priorities,,0.9,True,63.0
+61,61,1,600,600.0,set_priorities,1200.0,0.9,True,373.0
+61,61,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,False,
+61,61,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+61,61,4,2400,2400.0,remove_points + set_priorities,,0.9,True,73.0
+62,62,1,600,600.0,set_priorities,1200.0,0.9,True,80.0
+62,62,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,362.0
+62,62,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+62,62,4,2400,2400.0,remove_points + set_priorities,,0.9,True,374.0
+63,63,1,600,600.0,set_priorities,1200.0,0.9,True,137.0
+63,63,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,167.0
+63,63,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+63,63,4,2400,2400.0,remove_points + set_priorities,,0.9,True,59.0
+64,64,1,600,600.0,set_priorities,1200.0,0.9,True,19.0
+64,64,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,377.0
+64,64,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+64,64,4,2400,2400.0,remove_points + set_priorities,,0.9,True,54.0
+65,65,1,600,600.0,set_priorities,1200.0,0.9,True,152.0
+65,65,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,365.0
+65,65,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+65,65,4,2400,2400.0,remove_points + set_priorities,,0.9,True,433.0
+66,66,1,600,600.0,set_priorities,1200.0,0.9,False,
+66,66,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,240.0
+66,66,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+66,66,4,2400,2400.0,remove_points + set_priorities,,0.9,True,86.0
+67,67,1,600,600.0,set_priorities,1200.0,0.9,True,286.0
+67,67,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,197.0
+67,67,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+67,67,4,2400,2400.0,remove_points + set_priorities,,0.9,True,13.0
+68,68,1,600,600.0,set_priorities,1200.0,0.9,True,133.0
+68,68,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,475.0
+68,68,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+68,68,4,2400,2400.0,remove_points + set_priorities,,0.9,True,52.0
+69,69,1,600,600.0,set_priorities,1200.0,0.9,True,122.0
+69,69,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,378.0
+69,69,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+69,69,4,2400,2400.0,remove_points + set_priorities,,0.9,True,61.0
+70,70,1,600,600.0,set_priorities,1200.0,0.9,True,87.0
+70,70,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,501.0
+70,70,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+70,70,4,2400,2400.0,remove_points + set_priorities,,0.9,True,72.0
+71,71,1,600,600.0,set_priorities,1200.0,0.9,True,94.0
+71,71,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,380.0
+71,71,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+71,71,4,2400,2400.0,remove_points + set_priorities,,0.9,True,52.0
+72,72,1,600,600.0,set_priorities,1200.0,0.9,True,235.0
+72,72,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,222.0
+72,72,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+72,72,4,2400,2400.0,remove_points + set_priorities,,0.9,True,13.0
+73,73,1,600,600.0,set_priorities,1200.0,0.9,True,214.0
+73,73,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,False,
+73,73,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+73,73,4,2400,2400.0,remove_points + set_priorities,,0.9,True,79.0
+74,74,1,600,600.0,set_priorities,1200.0,0.9,True,200.0
+74,74,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,244.0
+74,74,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+74,74,4,2400,2400.0,remove_points + set_priorities,,0.9,True,340.0
+75,75,1,600,600.0,set_priorities,1200.0,0.9,True,173.0
+75,75,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,222.0
+75,75,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+75,75,4,2400,2400.0,remove_points + set_priorities,,0.9,True,79.0
+76,76,1,600,600.0,set_priorities,1200.0,0.9,True,109.0
+76,76,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,190.0
+76,76,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+76,76,4,2400,2400.0,remove_points + set_priorities,,0.9,True,80.0
+77,77,1,600,600.0,set_priorities,1200.0,0.9,True,186.0
+77,77,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,176.0
+77,77,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+77,77,4,2400,2400.0,remove_points + set_priorities,,0.9,True,150.0
+78,78,1,600,600.0,set_priorities,1200.0,0.9,True,73.0
+78,78,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,287.0
+78,78,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+78,78,4,2400,2400.0,remove_points + set_priorities,,0.9,True,53.0
+79,79,1,600,600.0,set_priorities,1200.0,0.9,True,64.0
+79,79,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,250.0
+79,79,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+79,79,4,2400,2400.0,remove_points + set_priorities,,0.9,True,132.0
+80,80,1,600,600.0,set_priorities,1200.0,0.9,True,88.0
+80,80,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,380.0
+80,80,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+80,80,4,2400,2400.0,remove_points + set_priorities,,0.9,True,99.0
+81,81,1,600,600.0,set_priorities,1200.0,0.9,True,95.0
+81,81,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,527.0
+81,81,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+81,81,4,2400,2400.0,remove_points + set_priorities,,0.9,True,60.0
+82,82,1,600,600.0,set_priorities,1200.0,0.9,True,122.0
+82,82,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,362.0
+82,82,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+82,82,4,2400,2400.0,remove_points + set_priorities,,0.9,True,53.0
+83,83,1,600,600.0,set_priorities,1200.0,0.9,False,
+83,83,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,193.0
+83,83,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+83,83,4,2400,2400.0,remove_points + set_priorities,,0.9,True,22.0
+84,84,1,600,600.0,set_priorities,1200.0,0.9,True,96.0
+84,84,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,284.0
+84,84,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+84,84,4,2400,2400.0,remove_points + set_priorities,,0.9,True,86.0
+85,85,1,600,600.0,set_priorities,1200.0,0.9,True,136.0
+85,85,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,279.0
+85,85,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+85,85,4,2400,2400.0,remove_points + set_priorities,,0.9,True,14.0
+86,86,1,600,600.0,set_priorities,1200.0,0.9,True,163.0
+86,86,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,344.0
+86,86,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+86,86,4,2400,2400.0,remove_points + set_priorities,,0.9,True,133.0
+87,87,1,600,600.0,set_priorities,1200.0,0.9,True,190.0
+87,87,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,485.0
+87,87,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+87,87,4,2400,2400.0,remove_points + set_priorities,,0.9,True,156.0
+88,88,1,600,600.0,set_priorities,1200.0,0.9,True,136.0
+88,88,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,322.0
+88,88,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+88,88,4,2400,2400.0,remove_points + set_priorities,,0.9,True,49.0
+89,89,1,600,600.0,set_priorities,1200.0,0.9,True,420.0
+89,89,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,349.0
+89,89,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+89,89,4,2400,2400.0,remove_points + set_priorities,,0.9,True,19.0
+90,90,1,600,600.0,set_priorities,1200.0,0.9,True,141.0
+90,90,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,166.0
+90,90,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+90,90,4,2400,2400.0,remove_points + set_priorities,,0.9,True,116.0
+91,91,1,600,600.0,set_priorities,1200.0,0.9,True,39.0
+91,91,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,282.0
+91,91,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+91,91,4,2400,2400.0,remove_points + set_priorities,,0.9,True,139.0
+92,92,1,600,600.0,set_priorities,1200.0,0.9,True,59.0
+92,92,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,529.0
+92,92,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+92,92,4,2400,2400.0,remove_points + set_priorities,,0.9,True,47.0
+93,93,1,600,600.0,set_priorities,1200.0,0.9,True,129.0
+93,93,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,439.0
+93,93,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+93,93,4,2400,2400.0,remove_points + set_priorities,,0.9,True,198.0
+94,94,1,600,600.0,set_priorities,1200.0,0.9,True,45.0
+94,94,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,214.0
+94,94,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+94,94,4,2400,2400.0,remove_points + set_priorities,,0.9,True,83.0
+95,95,1,600,600.0,set_priorities,1200.0,0.9,True,154.0
+95,95,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,195.0
+95,95,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+95,95,4,2400,2400.0,remove_points + set_priorities,,0.9,True,13.0
+96,96,1,600,600.0,set_priorities,1200.0,0.9,True,196.0
+96,96,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,359.0
+96,96,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+96,96,4,2400,2400.0,remove_points + set_priorities,,0.9,True,101.0
+97,97,1,600,600.0,set_priorities,1200.0,0.9,True,145.0
+97,97,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,224.0
+97,97,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+97,97,4,2400,2400.0,remove_points + set_priorities,,0.9,True,54.0
+98,98,1,600,600.0,set_priorities,1200.0,0.9,True,158.0
+98,98,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,False,
+98,98,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+98,98,4,2400,2400.0,remove_points + set_priorities,,0.9,True,110.0
+99,99,1,600,600.0,set_priorities,1200.0,0.9,True,105.0
+99,99,2,1200,1200.0,reconfigure + set_priorities,1800.0,0.9,True,150.0
+99,99,3,1800,1800.0,add_points + set_priorities,2400.0,0.9,True,0.0
+99,99,4,2400,2400.0,remove_points + set_priorities,,0.9,True,100.0

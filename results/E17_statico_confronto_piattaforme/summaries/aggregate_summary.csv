@@ -1,0 +1,3 @@
+drone_type,replications,J_delta_mean,J_delta_std,runs_reaching_90_percent_nominal_service,time_to_90_percent_nominal_service_mean_s,time_to_90_percent_nominal_service_std_s,event_episode_cases,event_episode_cases_reaching_90_percent_nominal_service,runs_contributing_to_event_response_mean,mean_event_response_time_mean_s,mean_event_response_time_std_s,final_residual_deficit_mean,final_residual_deficit_std,final_normalized_deficit_mean,final_normalized_deficit_std
+fixed_wing,100,0.5292341666666667,0.04524205025162787,6,361.0,99.47663042142109,0,0,0,,,9.23,2.004313530182523,0.46149999999999997,0.10021567650912616
+quadcopter,100,0.276995,0.05331300356955312,86,361.48837209302326,112.53775776167136,0,0,0,,,1.34,1.075155614764484,0.067,0.05375778073822421

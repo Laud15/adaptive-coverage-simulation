@@ -5,15 +5,19 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
-EXPERIMENT_NAME = "static_deployment_comparison"
+EXPERIMENT_NAME = (
+    "E26b_dinamico_frequenza_eventi_150s"
+)
 
 # Model parameters whose values distinguish the configurations being compared.
-COMPARISON_PARAMETERS = ["deployment"]
+COMPARISON_PARAMETERS = [
+    "radius_profile",
+]
 # Fraction of nominally obtainable service required by the response-time metric.
 COVERAGE_THRESHOLD = 0.90
 
-# Italian labels used only in figures. Internal parameter and column names stay
-# unchanged so saved data and experiment configurations remain reproducible.
+# Italian labels used only in figures.
+# Internal parameter and column names stay unchanged so saved data and experiment configurations remain reproducible.
 PLOT_PARAMETER_LABELS = {
     "width": "Larghezza dell'area di studio (m)",
     "height": "Altezza dell'area di studio (m)",
@@ -21,6 +25,8 @@ PLOT_PARAMETER_LABELS = {
     "n_points": "Numero iniziale di punti",
     "min_priority": "Quota minima iniziale",
     "max_priority": "Quota massima iniziale",
+    "priority_range_width": "Ampiezza dell'intervallo iniziale delle quote",
+    "initial_fleet_load": r"Carico nominale iniziale $\lambda$",
     "point_margin": "Margine dei centri dei punti (m)",
     "flight_buffer": "Buffer di volo (m)",
     "point_layout": "Layout iniziale dei punti",
@@ -36,6 +42,7 @@ PLOT_PARAMETER_LABELS = {
         "Raggio di percezione e comunicazione tra droni (m)"
     ),
     "point_sensing_radius": "Raggio di percezione dei punti (m)",
+    "radius_profile": "Configurazione dei raggi",
     "separation": "Distanza di attivazione della separazione (m)",
     "coverage_radius": "Raggio di copertura (m)",
     "cohere": "Intensità dell'attrazione verso la destinazione",
@@ -68,6 +75,8 @@ PLOT_VALUE_LABELS = {
     "fixed_wing": "ala fissa",
     "static": "statica",
     "dynamic_demo": "dimostrazione dinamica",
+    "rd10_rp10_nominal": r"$R_d=R_p=10$ m (nominale)",
+    "rd25_rp25_potenziato": r"$R_d=R_p=25$ m (potenziato)",
 }
 
 EVENT_TYPE_LABELS = {
@@ -107,11 +116,15 @@ DEFICIT_FIGURE_PATH = FIGURES_DIRECTORY / "normalized_deficit.png"
 R_DELTA_FIGURE_PATH = FIGURES_DIRECTORY / "deficit_reduction.png"
 FLEET_STATE_FIGURE_PATH = FIGURES_DIRECTORY / "fleet_state.png"
 J_DELTA_COMPARISON_FIGURE_PATH = FIGURES_DIRECTORY / "j_delta_comparison.png"
+J_DELTA_DYNAMIC_COMPARISON_FIGURE_PATH = (
+    FIGURES_DIRECTORY / "j_delta_dynamic_comparison.png"
+)
 POINT_STATE_FIGURE_PATH = FIGURES_DIRECTORY / "point_service_state.png"
 CAPACITY_ADJUSTED_COVERAGE_FIGURE_PATH = (FIGURES_DIRECTORY / "capacity_adjusted_coverage.png")
 TIME_TO_90_PERCENT_FIGURE_PATH = (FIGURES_DIRECTORY / "time_to_90_percent_nominal_service.png")
 SCENARIO_CHARACTERISTICS_FIGURE_PATH = (FIGURES_DIRECTORY / "scenario_characteristics.png")
 EVENT_RESPONSE_FIGURE_PATH = (FIGURES_DIRECTORY / "event_response_time.png")
+EXCESS_SERVICE_FIGURE_PATH = FIGURES_DIRECTORY / "excess_service_units.png"
 
 
 def get_plot_parameter_label(parameter):
@@ -493,58 +506,93 @@ def save_j_delta_comparison_plot(
     data,
     comparison_parameters,
     output_path,
+    mean_column="J_delta_mean",
+    std_column="J_delta_std",
+    y_label=r"Media di $J_\Delta$",
+    title=r"Deficit normalizzato medio aggregato ($J_\Delta$)",
 ):
-    """Save mean J_delta with one-standard-deviation error bars."""
-    if len(comparison_parameters) != 1:
-        raise ValueError("The J_delta comparison plot requires exactly one comparison parameter.")
-
-    parameter = comparison_parameters[0]
-    plot_data = data.sort_values(parameter).reset_index(drop=True)
-
-    parameter_values = plot_data[parameter]
-    mean_values = plot_data["J_delta_mean"]
-    std_values = plot_data["J_delta_std"].fillna(0.0)
-
-    # Connect ordered numeric values, but do not imply continuity between categorical parameter values.
-    if pd.api.types.is_numeric_dtype(parameter_values):
-        x_values = parameter_values
-        plot_format = "o-"
-    else:
-        x_values = plot_data.index
-        plot_format = "o"
-
-    figure, axis = plt.subplots(figsize=(8, 5))
-
-    axis.errorbar(
-        x_values,
-        mean_values,
-        yerr=std_values,
-        fmt=plot_format,
-        capsize=4,
-        label=MEAN_BAND_LABEL,
-    )
-
-    if not pd.api.types.is_numeric_dtype(parameter_values):
-        axis.set_xticks(plot_data.index)
-        axis.set_xticklabels(
-            [get_plot_value_label(value) for value in parameter_values]
+    """Save a mean integrated-deficit metric with SD error bars."""
+    if len(comparison_parameters) not in (1, 2):
+        raise ValueError(
+            "The J_delta comparison plot requires one or two "
+            "comparison parameters."
         )
 
-    axis.set_xlabel(get_plot_parameter_label(parameter))
-    axis.set_ylabel(r"Media di $J_\Delta$")
+    x_parameter = comparison_parameters[0]
+    figure, axis = plt.subplots(figsize=(8, 5))
+
+    if len(comparison_parameters) == 1:
+        plot_data = data.sort_values(x_parameter).reset_index(drop=True)
+        parameter_values = plot_data[x_parameter]
+
+        # Connect ordered numeric values, but do not imply continuity between categorical parameter values.
+        if pd.api.types.is_numeric_dtype(parameter_values):
+            x_values = parameter_values
+            plot_format = "o-"
+        else:
+            x_values = plot_data.index
+            plot_format = "o"
+
+        axis.errorbar(
+            x_values,
+            plot_data[mean_column],
+            yerr=plot_data[std_column].fillna(0.0),
+            fmt=plot_format,
+            capsize=4,
+            label=MEAN_BAND_LABEL,
+        )
+
+        if not pd.api.types.is_numeric_dtype(parameter_values):
+            axis.set_xticks(plot_data.index)
+            axis.set_xticklabels(
+                [get_plot_value_label(value) for value in parameter_values]
+            )
+    else:
+        series_parameter = comparison_parameters[1]
+
+        if not pd.api.types.is_numeric_dtype(data[x_parameter]):
+            raise ValueError(
+                "The first comparison parameter must be numeric when a "
+                "two-factor J_delta plot is requested."
+            )
+
+        for series_value, series_data in data.groupby(
+            series_parameter,
+            sort=True,
+            dropna=False,
+        ):
+            plot_data = series_data.sort_values(x_parameter)
+            axis.errorbar(
+                plot_data[x_parameter],
+                plot_data[mean_column],
+                yerr=plot_data[std_column].fillna(0.0),
+                fmt="o-",
+                capsize=4,
+                label=get_plot_value_label(series_value),
+            )
+
+    axis.set_xlabel(get_plot_parameter_label(x_parameter))
+    axis.set_ylabel(y_label)
     axis.set_ylim(bottom=0.0)
-    axis.set_title(r"Deficit normalizzato medio aggregato ($J_\Delta$)")
+    axis.set_title(title)
     axis.grid(alpha=0.3)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     figure.tight_layout()
 
-    axis.legend(
-        loc="upper left",
-        bbox_to_anchor=(1.02, 1.0),
-        borderaxespad=0.0,
-    )
+    legend_arguments = {
+        "loc": "upper left",
+        "bbox_to_anchor": (1.02, 1.0),
+        "borderaxespad": 0.0,
+    }
+
+    if len(comparison_parameters) == 2:
+        legend_arguments["title"] = get_plot_parameter_label(
+            comparison_parameters[1]
+        )
+
+    axis.legend(**legend_arguments)
 
     figure.savefig(
         output_path,
@@ -560,11 +608,96 @@ def save_time_to_90_percent_comparison_plot(
     output_path,
 ):
     """Save threshold-time statistics for each compared configuration."""
-    if len(comparison_parameters) != 1:
+    if len(comparison_parameters) not in (1, 2):
         raise ValueError(
             "The threshold-time comparison plot requires exactly "
-            "one comparison parameter."
+            "one or two comparison parameters."
         )
+
+    if len(comparison_parameters) == 2:
+        x_parameter, series_parameter = comparison_parameters
+
+        if not pd.api.types.is_numeric_dtype(data[x_parameter]):
+            raise ValueError(
+                "The first comparison parameter must be numeric when a "
+                "two-factor threshold-time plot is requested."
+            )
+
+        figure, (time_axis, rate_axis) = plt.subplots(
+            nrows=2,
+            ncols=1,
+            figsize=(8, 8),
+            sharex=True,
+        )
+
+        for series_value, series_data in data.groupby(
+            series_parameter,
+            sort=True,
+            dropna=False,
+        ):
+            plot_data = series_data.sort_values(x_parameter)
+            mean_values = plot_data[
+                "time_to_90_percent_nominal_service_mean_s"
+            ]
+            reached_mask = mean_values.notna()
+
+            line_color = None
+
+            if reached_mask.any():
+                errorbar = time_axis.errorbar(
+                    plot_data.loc[reached_mask, x_parameter],
+                    mean_values[reached_mask],
+                    yerr=plot_data.loc[
+                        reached_mask,
+                        "time_to_90_percent_nominal_service_std_s",
+                    ].fillna(0.0),
+                    fmt="o-",
+                    capsize=4,
+                    label=get_plot_value_label(series_value),
+                )
+                line_color = errorbar.lines[0].get_color()
+
+            reached_rate = (
+                plot_data["runs_reaching_90_percent_nominal_service"]
+                / plot_data["replications"]
+            )
+            rate_axis.plot(
+                plot_data[x_parameter],
+                reached_rate,
+                "o-",
+                color=line_color,
+            )
+
+        time_axis.set_ylabel(
+            "Tempo medio condizionale di raggiungimento (s)"
+        )
+        time_axis.set_ylim(bottom=0.0)
+        time_axis.set_title(
+            f"Raggiungimento del {COVERAGE_THRESHOLD:.0%} del servizio "
+            "nominalmente ottenibile"
+        )
+        time_axis.grid(alpha=0.3)
+        time_axis.legend(
+            title=get_plot_parameter_label(series_parameter),
+            loc="upper left",
+            bbox_to_anchor=(1.02, 1.0),
+            borderaxespad=0.0,
+        )
+
+        rate_axis.set_xlabel(get_plot_parameter_label(x_parameter))
+        rate_axis.set_ylabel("Frazione di run che raggiunge la soglia")
+        rate_axis.set_ylim(0.0, 1.05)
+        rate_axis.grid(alpha=0.3)
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        figure.tight_layout()
+        figure.savefig(
+            output_path,
+            dpi=200,
+            bbox_inches="tight",
+        )
+        plt.close(figure)
+        return
 
     parameter = comparison_parameters[0]
     plot_data = data.sort_values(parameter).reset_index(drop=True)
@@ -764,15 +897,11 @@ def save_fleet_state_plot(
     event_markers=()
 ):
     """Save fleet-state time series for each configuration."""
-    figure, axes = plt.subplots(
-        nrows=3,
-        ncols=1,
-        figsize=(8, 10),
-        sharex=True,
-        sharey=True
-    )
+    # Fixed-wing drones never adopt the discrete owner/support stationing roles,
+    # so stationing_drones is structurally zero and is not comparable with the quadcopter value in a platform comparison.
+    compare_platforms = "drone_type" in comparison_parameters
 
-    series = (
+    series = [
         (
             "idle_drones_mean",
             "idle_drones_std",
@@ -783,11 +912,23 @@ def save_fleet_state_plot(
             "exploring_drones_std",
             "Droni in esplorazione",
         ),
-        (
-            "stationing_drones_mean",
-            "stationing_drones_std",
-            "Droni in stazionamento",
-        ),
+    ]
+
+    if not compare_platforms:
+        series.append(
+            (
+                "stationing_drones_mean",
+                "stationing_drones_std",
+                "Droni in stazionamento",
+            )
+        )
+
+    figure, axes = plt.subplots(
+        nrows=len(series),
+        ncols=1,
+        figsize=(8, 3.4 * len(series)),
+        sharex=True,
+        sharey=True
     )
 
     configuration_groups = get_configuration_groups(
@@ -863,16 +1004,21 @@ def save_point_state_plot(
     output_path,
     event_markers=()
 ):
-    """Save point-service-state time series for each configuration."""
+    """Save point-coverage and service-state time series."""
     figure, axes = plt.subplots(
-        nrows=3,
+        nrows=4,
         ncols=1,
-        figsize=(8, 10),
+        figsize=(8, 13),
         sharex=True,
         sharey=True
     )
 
     series = (
+        (
+            "covered_points_mean",
+            "covered_points_std",
+            "Punti coperti da almeno un drone",
+        ),
         (
             "underserved_points_mean",
             "underserved_points_std",
@@ -1103,6 +1249,12 @@ def main():
 
     results_df = pd.read_csv(INPUT_PATH)
 
+    results_df["priority_range_width"] = (results_df["max_priority"] - results_df["min_priority"])
+    results_df["initial_fleet_load"] = (
+        results_df.groupby("RunId")["total_demand"].transform("first")
+        / results_df.groupby("RunId")["n_drones"].transform("first")
+    )
+
     # Fail early if a requested comparison parameter is absent from the CSV.
     missing_comparison_parameters = (set(COMPARISON_PARAMETERS) - set(results_df.columns))
 
@@ -1163,9 +1315,11 @@ def main():
         "residual_deficit",
         "normalized_deficit",
         "capacity_adjusted_coverage",
+        "covered_points",
         "underserved_points",
         "exactly_satisfied_points",
-        "overserved_points"
+        "overserved_points",
+        "excess_service_units",
     ]
 
     print(f"Loaded rows: {len(results_df)}")
@@ -1176,6 +1330,22 @@ def main():
     # J_delta is defined over simulation steps 1, ..., T.
     # The initial snapshot at Step 0 is therefore excluded.
     evaluation_rows = results_df[results_df["Step"] > 0]
+
+    # Dynamic experiments with different event intervals also need a metric that gives the common 600-step initial deployment zero weight. 
+    # Starting immediately after the first event yields exactly four equally weighted event windows in E26,
+    # despite the different total run durations.
+    if event_markers:
+        first_event_step = min(int(marker["step"]) for marker in event_markers)
+        dynamic_evaluation_rows = results_df[
+            results_df["Step"] > first_event_step
+        ]
+        J_delta_dynamic_by_run = (
+            dynamic_evaluation_rows
+            .groupby("RunId")["normalized_deficit"]
+            .mean()
+        )
+    else:
+        J_delta_dynamic_by_run = pd.Series(dtype=float)
 
     # Sort chronologically before using "last" for final metrics.
     evaluation_rows = evaluation_rows.sort_values(["RunId", "Step"])
@@ -1193,8 +1363,14 @@ def main():
             J_delta=("normalized_deficit", "mean"),
             final_time_s=("simulated_time_s", "last"),
             final_residual_deficit=("residual_deficit", "last"),
-            final_normalized_deficit=("normalized_deficit", "last")
+            final_normalized_deficit=("normalized_deficit", "last"),
+            mean_excess_service_units=("excess_service_units", "mean"),
+            final_excess_service_units=("excess_service_units", "last"),
         )
+    )
+
+    run_summary_df["J_delta_dynamic"] = (
+        run_summary_df["RunId"].map(J_delta_dynamic_by_run)
     )
 
     run_summary_df["time_to_90_percent_nominal_service_s"] = (
@@ -1271,12 +1447,16 @@ def main():
             r_delta_mean=("r_delta", "mean"),
             r_delta_std=("r_delta", "std"),
 
+            covered_points_mean=("covered_points", "mean"),
+            covered_points_std=("covered_points", "std"),
             underserved_points_mean=("underserved_points", "mean"),
             underserved_points_std=("underserved_points", "std"),
             exactly_satisfied_points_mean=("exactly_satisfied_points", "mean"),
             exactly_satisfied_points_std=("exactly_satisfied_points", "std"),
             overserved_points_mean=("overserved_points", "mean"),
             overserved_points_std=("overserved_points", "std"),
+            excess_service_units_mean=("excess_service_units", "mean"),
+            excess_service_units_std=("excess_service_units", "std"),
 
             idle_drones_mean=("idle_drones", "mean"),
             idle_drones_std=("idle_drones", "std"),
@@ -1319,6 +1499,8 @@ def main():
             replications=("RunId", "nunique"),
             J_delta_mean=("J_delta", "mean"),
             J_delta_std=("J_delta", "std"),
+            J_delta_dynamic_mean=("J_delta_dynamic", "mean"),
+            J_delta_dynamic_std=("J_delta_dynamic", "std"),
             runs_reaching_90_percent_nominal_service=("time_to_90_percent_nominal_service_s", "count"),
             time_to_90_percent_nominal_service_mean_s=("time_to_90_percent_nominal_service_s", "mean"),
             time_to_90_percent_nominal_service_std_s=("time_to_90_percent_nominal_service_s", "std"),
@@ -1343,6 +1525,22 @@ def main():
             final_residual_deficit_std=("final_residual_deficit", "std"),
             final_normalized_deficit_mean=("final_normalized_deficit", "mean"),
             final_normalized_deficit_std=("final_normalized_deficit", "std"),
+            mean_excess_service_units_mean=(
+                "mean_excess_service_units",
+                "mean",
+            ),
+            mean_excess_service_units_std=(
+                "mean_excess_service_units",
+                "std",
+            ),
+            final_excess_service_units_mean=(
+                "final_excess_service_units",
+                "mean",
+            ),
+            final_excess_service_units_std=(
+                "final_excess_service_units",
+                "std",
+            ),
         )
     )
 
@@ -1410,6 +1608,19 @@ def main():
         event_markers=event_markers,
     )
 
+    save_time_series_plot(
+        data=time_series_summary_df,
+        comparison_parameters=COMPARISON_PARAMETERS,
+        mean_column="excess_service_units_mean",
+        std_column="excess_service_units_std",
+        output_path=EXCESS_SERVICE_FIGURE_PATH,
+        title="Unità di servizio eccedenti nel tempo",
+        y_label="Contributi di servizio oltre le quote",
+        reference_y=0.0,
+        reference_label="Nessuna unità eccedente",
+        event_markers=event_markers,
+    )
+
     save_fleet_state_plot(
         data=time_series_summary_df,
         comparison_parameters=COMPARISON_PARAMETERS,
@@ -1424,12 +1635,26 @@ def main():
         event_markers=event_markers
     )
 
-    if len(COMPARISON_PARAMETERS) == 1:
+    if len(COMPARISON_PARAMETERS) in (1, 2):
         save_j_delta_comparison_plot(
             data=aggregate_summary_df,
             comparison_parameters=COMPARISON_PARAMETERS,
             output_path=J_DELTA_COMPARISON_FIGURE_PATH,
         )
+
+        if event_markers:
+            save_j_delta_comparison_plot(
+                data=aggregate_summary_df,
+                comparison_parameters=COMPARISON_PARAMETERS,
+                output_path=J_DELTA_DYNAMIC_COMPARISON_FIGURE_PATH,
+                mean_column="J_delta_dynamic_mean",
+                std_column="J_delta_dynamic_std",
+                y_label=r"Media di $J_{\Delta,\mathrm{dyn}}$",
+                title=(
+                    "Deficit normalizzato medio dopo il primo evento "
+                    r"($J_{\Delta,\mathrm{dyn}}$)"
+                ),
+            )
 
         save_time_to_90_percent_comparison_plot(
             data=aggregate_summary_df,
@@ -1470,9 +1695,15 @@ def main():
     print(f"Deficit-reduction figure saved to: "f"{R_DELTA_FIGURE_PATH}")
     print(f"Fleet-state figure saved to: {FLEET_STATE_FIGURE_PATH}")
     print(f"Point-service-state figure saved to: {POINT_STATE_FIGURE_PATH}")
+    print(f"Excess-service figure saved to: {EXCESS_SERVICE_FIGURE_PATH}")
     print(f"Scenario characteristics figure saved to: "f"{SCENARIO_CHARACTERISTICS_FIGURE_PATH}")
-    if len(COMPARISON_PARAMETERS) == 1:
+    if len(COMPARISON_PARAMETERS) in (1, 2):
         print("J_delta comparison figure saved to: "f"{J_DELTA_COMPARISON_FIGURE_PATH}")
+        if event_markers:
+            print(
+                "Dynamic J_delta comparison figure saved to: "
+                f"{J_DELTA_DYNAMIC_COMPARISON_FIGURE_PATH}"
+            )
         print(f"Time-to-threshold comparison figure saved to: "f"{TIME_TO_90_PERCENT_FIGURE_PATH}")
         if not event_response_df.empty:
             print("Event-response figure saved to: "f"{EVENT_RESPONSE_FIGURE_PATH}")

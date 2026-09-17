@@ -202,12 +202,14 @@ class CoverageModel(mesa.Model):
                 "a drone could cover a point without perceiving it."
             )
 
-        # A drone that perceives a staffed point must also perceive its owner at the center.
-        if drone_type == "quadcopter" and drone_sensing_radius + 1e-9 < point_sensing_radius:
+        # A quadcopter entering a stationing zone must already perceive the
+        # owner at the point center. Point perception may extend farther than
+        # inter-drone communication in targeted robustness experiments.
+        if drone_type == "quadcopter" and drone_sensing_radius + 1e-9 < coverage_radius:
             raise ValueError(
                 f"drone_sensing_radius ({drone_sensing_radius}) < "
-                f"point_sensing_radius ({point_sensing_radius}): "
-                "a drone could perceive a point without perceiving its owner."
+                f"coverage_radius ({coverage_radius}): a quadcopter could "
+                "enter a stationing zone without perceiving its owner."
             )
 
         # Every drone inside the separation distance must already be perceived.
@@ -549,9 +551,11 @@ class CoverageModel(mesa.Model):
         model_reporters = {
             "residual_deficit": CoverageModel.residual_deficit,
             "normalized_deficit": CoverageModel.normalized_deficit,
+            "covered_points": CoverageModel.covered_points,
             "underserved_points": CoverageModel.underserved_points,
             "exactly_satisfied_points": CoverageModel.exactly_satisfied_points,
             "overserved_points": CoverageModel.overserved_points,
+            "excess_service_units": CoverageModel.excess_service_units,
             "idle_drones": CoverageModel.idle_drones,
             "exploring_drones": CoverageModel.exploring_drones,
             "stationing_drones": CoverageModel.stationing_drones,
@@ -850,6 +854,13 @@ class CoverageModel(mesa.Model):
             return 0.0
         return self.residual_deficit() / self.total_demand
 
+    def covered_points(self):
+        """Return the number of active points covered by at least one drone."""
+        return sum(
+            point.occupancy > 0
+            for point in self.target_agents
+        )
+
     def underserved_points(self):
         """Return the number of active points below their required quota."""
         return sum(
@@ -868,6 +879,18 @@ class CoverageModel(mesa.Model):
         """Return the number of active points above their required quota."""
         return sum(
             point.occupancy > point.priority
+            for point in self.target_agents
+        )
+
+    def excess_service_units(self):
+        """Return service contributions supplied above point quotas.
+
+        A drone inside overlapping coverage zones may contribute to more than
+        one point, so this measures excess service units rather than a count
+        of distinct redundant drones.
+        """
+        return sum(
+            max(0, point.occupancy - point.priority)
             for point in self.target_agents
         )
 

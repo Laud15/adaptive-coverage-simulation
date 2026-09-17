@@ -368,7 +368,7 @@ PARAMETER_CONSTRAINTS = """
 
 - `flight_buffer >= coverage_radius + speed`
 - `coverage_radius <= point_sensing_radius`
-- Quadcopter: `drone_sensing_radius >= point_sensing_radius`
+- Quadcopter: `drone_sensing_radius >= coverage_radius`
 - Both platforms: `drone_sensing_radius >= separation`
 - Quadcopter: `0 < support_inset < coverage_radius`
 - Fixed wing: `cohere > 0` and `speed / cohere < coverage_radius`
